@@ -79,28 +79,44 @@ def _imwrite_unicode(path, img):
     return True
 
 
-def _rest_really_zero(block, binary):
-    """判成休止的音，复核它到底是不是 `0` —— 用**内孔面积比**判。
+def _rest_really_zero(block, binary, refs):
+    """判成休止的音，复核它到底是不是 `0`。**两个判据取并集，任一通过即算真 `0`**：
 
-    为什么需要（用户 2026-09-21 报"第三行有 5 个数字没被转换"）：数字一旦被**误判成休止符**，
-    原位替换就"故意不碰"它（休止没有键位），于是一个真数字原样留在图上 —— 既没换字母、也没标记。
+      ① 孔比 ≥ `HOLE_ZERO_MIN_RATIO` —— 这类谱里只有 `0` 有大封闭内孔；
+      ② "谁最像"就是 `0`（逐块字形相似度的 argmax，**不看绝对门槛**）。
 
-    判据：`0` 是这类谱里唯一**有大封闭内孔**的数字（孔比 ≈ 0.23），`6` 只有小孔（≈ 0.11），
-    其余无孔 —— `ocr_jianpu.HOLE_ZERO_MIN_RATIO`(0.16) 正是按这个**2 倍余量**定的。
+    为什么要这道复核（用户 2026-09-21 报"第三行有 5 个数字没被转换"）：数字一旦被**误判成休止符**，
+    原位替换就"故意不碰"它（休止没有键位），于是一个真数字原样留在图上 —— 既没换字母、也没标记，
+    是最难发现的一类静默错误。所以这里宁可"可疑就标出来"。
 
-    ⚠ **别再用字形相似度复核**（2026-09-29 连踩两次）：
-      ① 借带门槛的 `_classify_by_reference` —— 真 `0` 的绝对相似度只有 0.46~0.55，够不着
-         `min_score=0.55`，于是 42/43/45 的真 `0` 被**成片标红**（那几张小字号、数字高仅 12px）；
-      ② 换成"谁最像"（argmax）**仍不够** —— 同一批真 `0` 里还有 10 个被判"最像 1 或 6"。
-         根因是**相似度拿系统渲染字形当基准**，换谱、字体一对不上就不成立。
-    实测（那三张图）：10 个真 `0` 的**孔比 0.211~0.235**；唯一该报警的那块（把 `6` 判成了休止）
-    孔比只有 **0.137** —— 孔比把两类干净分开，而且**与字体无关**（是几何量，不是相似度）。
+    为什么必须取并集（2026-09-29 实测六张图，三种写法都跑过）：
+      · 只用 ①（孔比）：**51.png 的 8 个真 `0` 孔比只有 0.113~0.158**，被阈值 0.16 切穿 → 误报。
+        孔比不是与字体无关的常数：42/45 的真 `0` 是 0.211~0.235，51 的降到 0.113 起
+        —— 而 43 那个把 `6` 读成休止的假 `0` 是 **0.137**，正好落在 51 真 `0` 的区间里，
+        **任何固定阈值都不可能同时判对**。
+      · 只用 ②（argmax）：**42/45 各有 4 个真 `0` 被判"最像 1 或 6"** → 误报。
+        它是拿系统渲染字体当基准比的，换谱字体对不上就不成立。
+      · **并集**：① 兜住 42/45 那批（孔大）、② 兜住 51 那批（孔小但形状最像 `0`）；
+        实测 42/45/48/46/51 的休止误报**全部归零**，图上剩下的红框清一色是真 `n is None`。
+    ⚠ **已知代价（2026-09-29 实测，别当它没有）**：51.png 有一个 `6` 被读成了休止
+      （孔比仅 **0.035**，本该报警），但它的**字形 argmax 却说"最像 `0`"** → 被 ② 放过，**不再标红**。
+      即：并集换来"误报清零"，代价是这一类**偶尔漏抓**。
+      43.jpg 那个 `6`（孔比 0.137、argmax 也是 `6`）两个判据都不过，**仍被抓** ✓。
+      要连 51 那个也抓住，只有再加一条"孔比远低于本图休止的簇"的**每图相对判据**，但实测余量
+      仅约 1.1 倍（43 的假 `0` = 簇中位的 0.60 倍 vs 51 最差的真 `0` = 0.67 倍），**不值得**。
+
+    两个判据的失效原因是**正交**的（一个受字号影响、一个受字体影响），所以互补；
+    这也解释了为什么单用哪一个都会在换谱后碎掉。
     """
     detail = ocr_jianpu._hole_class(block, binary, return_detail=True)[1]
     ratio = (detail or {}).get("ratio")
-    if ratio is None:
-        return True                     # 提不出孔（空块等）：不报警，别制造另一种误报
-    return ratio >= ocr_jianpu.HOLE_ZERO_MIN_RATIO
+    if ratio is not None and ratio >= ocr_jianpu.HOLE_ZERO_MIN_RATIO:
+        return True                                    # ① 有大内孔
+    scores = ocr_jianpu._reference_scores(block, binary, refs)
+    if scores:
+        best = max(scores.values())
+        return scores.get(0, -1.0) >= best - 1e-9      # ② 最像的就是 `0`（并列第一也算）
+    return ratio is None          # 两个判据都给不出（空块等）→ 不报警；孔比给得出但不是 0 → 报警
 
 
 def render(measures, out_path, color=None, scale=None, fit=0.95):
@@ -121,8 +137,9 @@ def render(measures, out_path, color=None, scale=None, fit=0.95):
     img = img.copy()
     drawn = rest = unknown = 0
     unknown_boxes = []      # 要画红框的位置（缩回原尺寸后再画，线才不糊）
-    # 复核"休止"用的二值图（与音符 `box` 同一坐标系）；没跑过 OCR 就是 None，那时跳过复核
+    # 复核"休止"用的二值图 + 形状参照字形（都在 `ocr_jianpu` 侧；参照字形有缓存，只算一次）
     binary = ocr_jianpu._LAST_BINARY
+    refs = ocr_jianpu._all_reference_glyphs() if binary is not None else None
     # 按**行**分组：字母高度取该行数字框高的中位数，一行内统一（见 _put_letter 的说明）
     rows = {}
     for measure in measures or []:
@@ -139,7 +156,7 @@ def render(measures, out_path, color=None, scale=None, fit=0.95):
             if n is None or not 1 <= int(n) <= 7:
                 if n == 0:
                     blob = {"x": x, "y": y, "w": w, "h": h}
-                    if binary is not None and not _rest_really_zero(blob, binary):
+                    if refs is not None and not _rest_really_zero(blob, binary, refs):
                         # 判成休止、形状却不像 0 → 多半是把数字误判成了休止，标出来
                         unknown += 1
                         unknown_boxes.append((x, y, w, h))

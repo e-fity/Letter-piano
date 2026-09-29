@@ -371,6 +371,25 @@ def _classify_by_reference(block, binary, refs, canvas=(24, 32),
     return (digit, best[0]) if return_score else digit
 
 
+def _reference_scores(block, binary, refs, canvas=(24, 32)):
+    """块与 0-7 各标准字形的**最高相似度**：`{数字: 分数}`。
+
+    与 `_classify_by_reference` 同一套算法，但**不做门槛剔除**（不看 `min_score` /
+    `min_margin`）—— 门槛回答的是"**敢不敢下定论**"，而调用方有时只想知道"**谁最像**"。
+    `overlay_letters` 的休止复核要的就是后者（见 `_rest_really_zero`）。
+    """
+    if not refs:
+        return {}
+    roi = binary[block["y"]:block["y"] + block["h"], block["x"]:block["x"] + block["w"]]
+    if roi.size == 0:
+        return {}
+    feat = _feature_from_array(roi > 0, canvas)
+    if feat is None:
+        return {}
+    return {digit: max(_corr(feat, r) for r in refs_for_digit)
+            for digit, refs_for_digit in refs.items()}
+
+
 def _stroke_runs(block, binary):
     """块内「每行墨段数」的平均值：数字笔画少（约 1.5-2.5），汉字笔画多（≥3）。"""
     roi = binary[block["y"]:block["y"] + block["h"],
