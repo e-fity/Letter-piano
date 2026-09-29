@@ -1,0 +1,21 @@
+{
+  "_说明": "旁注文件（可选）。用法：python pianoWeb/build.py out/4_review.json -o pianoWeb/4.html --annotations pianoWeb/4.notes.json",
+  "_sections_说明": "分段名工具不产出，要手填。lines 是 _review.json 里的行号（L01 → 1）。下面是按 4.png 内容推的，请照实际改。",
+  "subtitle": "（张明敏演唱）",
+  "sections": [
+    { "name": "主歌 × 2", "lines": [1, 2, 3, 4] },
+    { "name": "副歌", "lines": [5, 6, 7, 8] },
+    { "name": "间奏 / 结尾", "lines": [9, 10, 11] }
+  ],
+  "_panels_说明": "面板内容逐谱手写、无法自动生成。html 里可以用少量标签（如 <b>、<a>）。不填就整块不显示。",
+  "panels": [
+    {
+      "title": "音区校正（示例·请按实际写）",
+      "html": "这里写这张谱里**音区**判定的修正点，例如「某处的低音 7、6、5 使用 M、N、B」之类。"
+    },
+    {
+      "title": "判读规则（示例）",
+      "html": "这里写这张谱的判读约定，例如「数字下方独立圆点决定低音；连续数字的横线只决定时值」。"
+    }
+  ]
+}

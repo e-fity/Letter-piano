@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>字母谱</title>
+<style>
+:root{
+  --bg:#14161b; --panel:#1c1f27; --panel2:#22262f; --line:#2c313c;
+  --ink:#e6e9ef; --dim:#98a0b0; --acc:#d8b46a;
+  --low:#6aa9ff; --mid:#e8b45c; --high:#7ee787; --rest:#6b7382;
+  --cell:36px; --gap:8px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.6 "PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 26px 60px}
+/* 顶栏 */
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding-bottom:14px;border-bottom:1px solid var(--line)}
+.meta{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.14em;
+  color:var(--acc);text-transform:uppercase}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+  border-radius:7px;padding:7px 12px;font-size:13px;cursor:pointer}
+button:hover{border-color:var(--acc);color:var(--acc)}
+h1{font-size:34px;margin:20px 0 6px;font-weight:700}
+h1 .sub{font-size:.5em;color:var(--dim);font-weight:400;margin-left:.5em}
+.about{color:var(--dim);font-size:13px;margin:0 0 14px}
+/* 图例 */
+.legend{display:flex;gap:20px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);
+  border-radius:9px;padding:9px 14px;font-size:13px;color:var(--dim);margin-bottom:16px}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;
+  vertical-align:middle}
+.legend .low i{background:var(--low)} .legend .mid i{background:var(--mid)}
+.legend .high i{background:var(--high)} .legend .rest i{background:var(--rest)}
+.legend .unknown i{background:#e05555}
+.legend .ext i{background:none;width:12px;height:2px;border-radius:0;background:var(--dim)}
+/* 面板 */
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 14px}
+.panel h4{margin:0 0 6px;font-size:13px;color:var(--acc);font-weight:600}
+.panel .b{color:var(--dim);font-size:13px}
+a{color:#7fb0ff}
+/* 谱面 */
+.section{margin:24px 0 8px;color:var(--dim);font-size:13px;letter-spacing:.1em;
+  border-left:3px solid var(--acc);padding-left:9px}
+.line{display:flex;flex-wrap:wrap;align-items:flex-start;gap:5px;
+  padding:5px 0;border-bottom:1px dotted #23262e}
+/* 单元格：固定高度，内部绝对定位，宽度随内容（延时线会把格子撑宽） */
+.cell{position:relative;height:74px;min-width:32px;padding:0 3px;cursor:pointer}
+.cell .ch{position:absolute;top:15px;left:50%;transform:translateX(-50%);
+  white-space:nowrap;font:700 19px/1 ui-monospace,Menlo,Consolas,monospace}
+.cell.low .ch{color:var(--low)} .cell.mid .ch{color:var(--mid)} .cell.high .ch{color:var(--high)}
+.cell.rest .ch{color:var(--rest)}
+/* 没认出来的音：显示 Q，并标红底（对应工具图上的红框） */
+.cell.unknown{background:rgba(214,64,64,.20);border-radius:6px;
+  box-shadow:inset 0 0 0 1px rgba(226,86,86,.55)}
+.cell.unknown .ch{color:#ff7b7b}
+.cell .mod{position:absolute;top:1px;left:0;right:0;text-align:center;
+  font:10px/1 ui-monospace,monospace;color:var(--dim)}
+.cell .dot{color:var(--acc)}
+/* 减时线：字母下方一条/多条短横线 */
+.cell .beams{position:absolute;top:37px;left:14%;width:72%;height:0;
+  border-top:2px solid var(--dim)}
+.cell .beams.b2{box-shadow:0 -4px 0 -1px var(--dim)}
+.cell .beams.b3{box-shadow:0 -4px 0 -1px var(--dim),0 -8px 0 -2px var(--dim)}
+.cell .ext{color:var(--dim);font-size:15px;letter-spacing:1px}
+/* 连音弧：相邻两格各画半段，拼起来像一条弧 */
+.cell .arc{position:absolute;top:6px;height:8px;border-bottom:1.4px solid #7c8496}
+.cell .arc.right{left:50%;right:-5px;border-radius:0 0 8px 0}
+.cell .arc.left{right:50%;left:-5px;border-radius:0 0 0 8px}
+.cell .arc.whole{left:10%;right:10%;border-radius:0 0 8px 8px}
+.cell .lyr{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);
+  font-size:13px;white-space:nowrap;color:var(--ink)}
+/* 小节线 / 括号：与单元格同高，线本身只占中间一条 */
+.bar,.paren{height:74px;display:flex;align-items:center;color:#5c6474;
+  font:600 20px/1 ui-monospace,monospace}
+.paren{color:var(--dim);font-size:17px}
+.bar i{display:inline-block;width:1.5px;height:34px;background:#5c6474;margin:0 1px}
+.bar i.heavy{width:3px}
+.bar.dbl{letter-spacing:-2px}
+.cell.lowconf .ch::after{content:"";position:absolute;inset:2px -5px;border:1px solid #a65;
+  border-radius:3px;opacity:.45}
+/* 试听时高亮 */
+.cell.playing .ch{text-shadow:0 0 12px currentColor}
+/* ---------- 编辑模式 / 修改弹窗 ---------- */
+body.editing .cell{box-shadow:inset 0 0 0 1px rgba(120,160,255,.35);border-radius:6px}
+body.editing .cell:hover{box-shadow:inset 0 0 0 1px #7fb0ff;background:rgba(110,150,255,.14)}
+.cell.edited::after{content:"";position:absolute;top:1px;right:1px;width:5px;height:5px;
+  border-radius:50%;background:var(--acc)}
+/* 「去除」：这个块**根本不是音符**（升号 ♯ / 间奏文字「（间奏略）」/ 汉字残片…）。
+   存的是 `c.removed`；保存时会把它从导出的 `_review.json` 的 notes 里**删掉**，
+   所以下游重出成品时这个音连同它的时值一起消失（时值在 review_io 里是按 beams/dotted/extend 重算的）。*/
+.cell.removed{opacity:.5;background:rgba(120,128,140,.12);border-radius:6px}
+.cell.removed:hover{opacity:.9}
+.cell.removed .ch{color:var(--dim)}
+.mask{position:fixed;inset:0;z-index:50;background:rgba(8,9,12,.74);
+  display:flex;align-items:center;justify-content:center;padding:22px}
+.mask[hidden]{display:none}
+.dlg{width:min(680px,100%);max-height:92vh;overflow:auto;background:#191c23;
+  border:1px solid var(--line);border-radius:14px;padding:20px 22px 16px;
+  box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.dlghead{position:relative}
+.kicker{font:11px/1 ui-monospace,monospace;letter-spacing:.16em;color:var(--acc)}
+.x{position:absolute;top:-4px;right:-6px;background:none;border:0;color:var(--dim);
+  font-size:17px;cursor:pointer;padding:4px 10px}
+.dlg h2{margin:10px 0 6px;font-size:26px}
+.loc{color:var(--dim);font-size:13px;margin-bottom:14px}
+.info{background:#1e2330;border:1px solid #2b3243;border-radius:8px;padding:9px 12px;
+  font-size:13px;color:#b9c2d4;margin-bottom:16px}
+.info b{color:var(--ink)}
+.dlg .lbl{font-size:13px;color:var(--dim);margin:14px 0 8px}
+.dlg .lbl .opt{color:#6b7382}
+.keys{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+.key{background:#20242e;border:1px solid #2c313c;border-radius:9px;padding:9px 0 6px;
+  text-align:center;cursor:pointer;color:var(--ink);font:700 17px/1 ui-monospace,monospace}
+.key small{display:block;font:11px/1.6 sans-serif;color:var(--dim);font-weight:400}
+.key:hover{border-color:#5c6474}
+.key.sel{border-color:#7ee787;background:#1d2b22;box-shadow:0 0 0 1px #7ee787 inset}
+.key.restkey{grid-column:span 2}
+.shiftrow{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.shiftrow .lbl2{font-size:13px;color:var(--dim)}
+.shiftbtns{display:flex;gap:6px}
+.shiftbtns button{padding:5px 11px;font-size:12px}
+.shiftbtns button.sel{border-color:var(--acc);color:var(--acc)}
+.shiftbtns button:disabled{opacity:.35;cursor:not-allowed}
+.shiftrow .hint{font-size:12px;color:#6b7382}
+.dlg textarea{width:100%;min-height:74px;resize:vertical;background:#14161b;
+  border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:10px 12px;
+  font:13px/1.6 inherit}
+.dlg textarea::placeholder{color:#5c6474}
+.dlgfoot{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
+.dlgfoot button{padding:9px 16px;font-size:14px}
+.dlgfoot .primary{background:#1f7a3f;border-color:#2b9c52;color:#eaffef}
+.dlgfoot .primary:hover{background:#26914b;border-color:#3fbf68;color:#fff}
+footer{margin-top:34px;color:#5c6474;font-size:12px;border-top:1px solid var(--line);padding-top:12px}
+@media (max-width:760px){.panels{grid-template-columns:1fr}:root{--cell:30px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="meta" id="meta"></div>
+    <div class="btns">
+      <button data-act="copy">复制字母谱</button>
+      <button data-act="json">下载数据 JSON</button>
+      <button data-act="print">打印 / 存 PDF</button>
+      <button id="btnEdit">校谱修改</button>
+      <button id="btnExport" hidden>导出改动 (0)</button>
+    </div>
+  </div>
+  <h1 id="title"></h1>
+  <p class="about" id="about"></p>
+  <div class="legend" id="legend"></div>
+  <div class="panels" id="panels"></div>
+  <main id="score"></main>
+  <div class="mask" id="mask" hidden>
+    <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+      <div class="dlghead">
+        <div class="kicker">EDIT LETTER NOTE</div>
+        <button class="x" id="dlgX" title="关闭">✕</button>
+        <h2 id="dlgTitle">修改这个音符</h2>
+        <div class="loc" id="dlgLoc"></div>
+      </div>
+      <div class="info" id="dlgInfo"></div>
+      <div class="lbl">选择正确的字母键</div>
+      <div class="keys" id="dlgKeys"></div>
+      <div class="shiftrow">
+        <span class="lbl2">Shift 层级</span>
+        <div class="shiftbtns" id="dlgShift"></div>
+        <span class="hint" id="dlgShiftHint"></span>
+      </div>
+      <div class="lbl">修改原因 <span class="opt">（会进入学习记录）</span></div>
+      <textarea id="dlgReason" placeholder="例如：原谱数字下方有独立圆点，应是低音；之前把时值横线和音高点混淆了。"></textarea>
+      <div class="dlgfoot">
+        <button id="dlgReset">恢复原谱</button>
+        <button id="dlgCancel">取消</button>
+        <button id="dlgSave" class="primary">保存修改</button>
+      </div>
+    </div>
+  </div>
+  <footer id="foot"></footer>
+</div>
+<script>
+let DATA = /*__DATA__*/null;
+const $ = s => document.querySelector(s);
+
+/* ---------- 谱面渲染 ---------- */
+const BAR_TXT = {"|":"bar","||":"bar dbl",":||":"bar dbl","||:":"bar dbl"};
+function barHtml(txt, side){
+  if(!txt) return "";
+  // `||` / `:||` / `||:` 画成「粗+细」双竖线
+  if(txt === "||" || txt === ":||" || txt === "||:"){
+    const dots = txt.includes(":") ? '<span class="paren">:</span>' : '<span style="width:4px"></span>';
+    const bars = txt.startsWith("||:") ? '<i class="heavy"></i><i></i>' : '<i></i><i class="heavy"></i>';
+    return txt.startsWith("||:") ? `<span class="bar dbl">${bars}${dots}</span>`
+                                 : `<span class="bar dbl">${dots}${bars}</span>`;
+  }
+  return '<span class="bar"><i></i></span>';
+}
+function cellHtml(c){
+  const ext = c.extend ? `<span class="ext">${"—".repeat(c.extend)}</span>` : "";
+  const did = `data-id="${c.id || ""}"`;
+  if(c.removed)   // 已「去除」：不占音符位、不发声、不进字母谱
+    return `<span class="cell removed${c._edited ? " edited" : ""}" ${did}>`
+      + `<span class="ch">∅</span><span class="lyr">${esc(c.lyric)}</span></span>`;
+  if(c.rest)
+    return `<span class="cell rest${c._edited ? " edited" : ""}" ${did} data-n="0" data-o="0">`
+      + `<span class="ch">0${ext}</span><span class="lyr">${esc(c.lyric)}</span></span>`;
+  const cls = ["cell", c.band]; if(c.lowConf) cls.push("lowconf"); if(c._edited) cls.push("edited");
+  const beams = c.beams ? `<span class="beams b${c.beams}"></span>` : "";
+  const dot = c.dotted ? '<span class="dot">·</span>' : "";
+  const mod = c.mod ? `<span class="mod">${c.mod}</span>` : "";
+  const arc = c.slurToNext ? '<span class="arc right"></span>'
+            : (c.slurLeft ? '<span class="arc whole"></span>' : "");
+  const marks = [c.accent?">":"", c.breath?"v":"", c.triplet?"³":"",
+                 c.house?c.house+".":""].filter(Boolean).join(" ");
+  return `<span class="${cls.join(" ")}" ${did} data-n="${c.n ?? ""}" data-o="${c.o ?? ""}">
+      ${mod}${arc}<span class="ch">${c.ch}${dot}${ext}</span>${beams}
+      <span class="lyr">${esc(c.lyric || marks)}</span></span>`;
+}
+function lineHtml(line){
+  let out = "";
+  for(const c of line.cells){
+    if(c.barBefore) out += barHtml(c.barBefore);
+    if(c.parenBefore) out += '<span class="paren">(</span>';
+    out += cellHtml(c);
+    if(c.parenAfter) out += '<span class="paren">)</span>';
+    if(c.barAfter) out += barHtml(c.barAfter);
+  }
+  return `<div class="line" data-line="${line.line}">${out}</div>`;
+}
+function esc(s){ return String(s||"").replace(/[&<>]/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[m])); }
+
+/* ---------- 分段 ---------- */
+function bySection(){
+  if(!DATA.sections || !DATA.sections.length) return [{name:"", lines:DATA.lines}];
+  const map = {}; DATA.lines.forEach(l => map[l.line] = l);
+  return DATA.sections.map(s => ({
+    name: s.name,
+    lines: (s.lines || []).map(n => map[n]).filter(Boolean),
+  })).filter(s => s.lines.length);
+}
+
+/* ---------- 页面 ---------- */
+function paint(){
+  document.title = (DATA.title || "字母谱") + " · 字母谱";
+  $("#meta").textContent = `LETTER SCORE · ${DATA.key.replace("="," = ")} · ${DATA.meter}`;
+  $("#title").innerHTML = `《${esc(DATA.title)}》字母谱` +
+    (DATA.subtitle ? `<span class="sub">${esc(DATA.subtitle)}</span>` : "");
+  $("#about").textContent = DATA.about || "";
+  $("#legend").innerHTML = DATA.legend.map(l =>
+    `<span class="${l.cls}"><i></i>${esc(l.label)}</span>`).join("");
+  $("#panels").innerHTML = (DATA.panels || []).map(p =>
+    `<div class="panel"><h4>${esc(p.title)}</h4><div class="b">${p.html || esc(p.text || "")}</div></div>`).join("");
+  $("#score").innerHTML = bySection().map(s =>
+    (s.name ? `<div class="section">${esc(s.name)}</div>` : "") +
+    s.lines.map(lineHtml).join("")).join("");
+  $("#foot").textContent =
+    `${DATA.source ? DATA.source + " · " : ""}${DATA.title} ${DATA.key} ${DATA.meter}` +
+    ` · ${DATA.lines.length} 行 · 由 jianpu2letter 的审核 JSON 渲染`;
+}
+
+/* ---------- 试听 ---------- */
+const SEMI = {1:0,2:2,3:4,4:5,5:7,6:9,7:11};
+const PC = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+let ac = null;
+function freq(n, o){
+  const letter = DATA.key.split("=")[1].replace(/[#b]/g, "");
+  const acc = DATA.key.split("=")[1].includes("b") ? -1 : (DATA.key.split("=")[1].includes("#") ? 1 : 0);
+  const pc = (PC[letter] + acc + 12) % 12;
+  return 261.63 * Math.pow(2, (pc - 0 + SEMI[n] + 12 * o) / 12);
+}
+function beep(el){
+  const n = +el.dataset.n, o = +el.dataset.o;
+  if(!n) return;
+  ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ac.createOscillator(), g = ac.createGain();
+  osc.type = "triangle"; osc.frequency.value = freq(n, o);
+  g.gain.setValueAtTime(.0001, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(.25, ac.currentTime + .01);
+  g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + .45);
+  osc.connect(g).connect(ac.destination); osc.start(); osc.stop(ac.currentTime + .5);
+  el.classList.add("playing"); setTimeout(() => el.classList.remove("playing"), 460);
+}
+document.addEventListener("click", e => {
+  const cell = e.target.closest(".cell"); if(!cell) return;
+  if(st.on) openEditor(cell.dataset.id); else beep(cell);   // 校谱模式下点击 = 改音
+});
+
+/* ---------- 按钮 ---------- */
+function letterText(){
+  return DATA.lines.map((l, i) =>
+    "L" + String(l.line).padStart(2,"0") + ": " +
+    l.cells.filter(c => !c.removed).map(c => (c.rest ? "0" : c.ch) + (c.dotted ? "·" : "") +
+      (c.beams ? "_".repeat(c.beams) : "") + (c.extend ? "-".repeat(c.extend) : "") +
+      (c.barAfter ? " " + c.barAfter : "")).join(" ")).join("\n");
+}
+document.querySelectorAll("button[data-act]").forEach(b => b.onclick = () => {
+  const act = b.dataset.act;
+  if(act === "copy"){ copyText(letterText(), b); }
+  if(act === "json"){ dl(JSON.stringify(DATA, null, 2), (DATA.title||"score") + ".data.json"); }
+  if(act === "print"){ window.print(); }
+});
+function copyText(text, btn){
+  // 直接双击打开（file://）时没有安全上下文，`navigator.clipboard` 会失败 → 退回 execCommand
+  const done = () => { btn.textContent = "已复制 ✓";
+    setTimeout(() => { btn.textContent = "复制字母谱"; }, 1200); };
+  const fallback = () => {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.cssText = "position:fixed;left:-9999px;top:0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch(e){ flash("复制失败，请手动选中复制"); }
+    document.body.removeChild(ta);
+  };
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(done, fallback);
+  } else { fallback(); }
+}
+function dl(text, name){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type:"application/json"}));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+/* ---------- 校谱修改 ---------- */
+const KEYS = [
+  {l:"Z",o:-1,n:1},{l:"X",o:-1,n:2},{l:"C",o:-1,n:3},{l:"V",o:-1,n:4},
+  {l:"B",o:-1,n:5},{l:"N",o:-1,n:6},{l:"M",o:-1,n:7},
+  {l:"S",o:0,n:1},{l:"D",o:0,n:2},{l:"F",o:0,n:3},{l:"G",o:0,n:4},
+  {l:"H",o:0,n:5},{l:"J",o:0,n:6},{l:"K",o:0,n:7},
+  {l:"E",o:1,n:1},{l:"R",o:1,n:2},{l:"T",o:1,n:3},{l:"Y",o:1,n:4},
+  {l:"U",o:1,n:5},{l:"I",o:1,n:6},{l:"O",o:1,n:7},
+];
+const BAND = {"-1":"低","0":"中","1":"高"};
+const st = {on:false,id:null,sel:null,shift:0,edits:new Map(),reasons:new Map()};
+
+const cellById = id => { for(const L of DATA.lines) for(const c of L.cells) if(c.id===id) return c; return null; };
+const lineById = id => { for(const L of DATA.lines) for(const c of L.cells) if(c.id===id) return L.line; return 0; };
+const idxById  = id => { for(const L of DATA.lines){ const i=L.cells.findIndex(c=>c.id===id); if(i>=0) return i+1; } return 0; };
+const sectionById = id => { const ln=lineById(id);
+  const s=(DATA.sections||[]).find(s=>(s.lines||[]).includes(ln)); return s?(" · "+s.name):""; };
+const shiftOf = o => (o<=-3||o>=3)?2:(o<=-2||o>=2)?1:0;
+const finalO  = (o0,s) => o0<0 ? o0-s : o0>0 ? o0+s : 0;
+function letterNO(n,o){
+  if(n===null||n===undefined) return {ch:"Q",lab:"没认出来"};
+  if(n===0) return {ch:"0",lab:"休止"};
+  const b=Math.sign(o)||0, k=KEYS.find(k=>k.n===n&&k.o===b);
+  return k?{ch:k.l,lab:BAND[String(b)]+n}:{ch:"?",lab:"?"};
+}
+const fmt = (n,o) => { const a=letterNO(n,o); return a.ch+"（"+a.lab+"）"; };
+
+function drawDialog(){
+  const c = cellById(st.id);
+  $("#dlgLoc").textContent = "《"+DATA.title+"》"+sectionById(st.id)
+    + " · 第 "+lineById(st.id)+" 行 · 第 "+idxById(st.id)+" 个音";
+  const tl = c.beams ? " · 时值线 "+c.beams+" 条" : "";
+  const unk = !!(st.sel && st.sel.unk);
+  const del = !!(st.sel && st.sel.del);
+  $("#dlgInfo").innerHTML = "映射2 · 原谱 <b>"+fmt(c.origN,c.origO)+"</b> · 当前 <b>"
+    + (del ? "∅（去除）" : fmt(c.n===undefined?null:c.n, c.o||0))
+    + "</b>"+tl+"（修改音高不会改变时值或 Shift 层级）";
+  $("#dlgKeys").innerHTML = KEYS.map(k=>{
+    const sel = !unk && !del && st.sel && st.sel.n===k.n && st.sel.o0===k.o;
+    return '<div class="key'+(sel?" sel":"")+'" data-n="'+k.n+'" data-o="'+k.o+'">'
+         + k.l + '<small>'+BAND[String(k.o)]+k.n+'</small></div>';
+  }).join("")
+  + '<div class="key'+((st.sel&&st.sel.n===0)?" sel":"")+'" data-n="0" data-o="0" '
+  + 'style="grid-column:span 2">0<small>休止</small></div>'
+  + '<div class="key'+(del?" sel":"")+'" data-del="1" style="grid-column:span 2">'
+  + '∅<small>去除</small></div>'
+  + '<div class="key'+(unk?" sel":"")+'" data-unk="1" style="grid-column:span 3">'
+  + 'Q<small>认不出</small></div>';
+  const noShift = unk || del || !st.sel || st.sel.o0===0;
+  if(noShift) st.shift = 0;
+  $("#dlgShift").innerHTML = [0,1,2].map(s=>
+    '<button data-s="'+s+'" class="'+(s===st.shift?"sel":"")+'"'
+    + ((noShift&&s)?" disabled":"")+'>'+(s===0?"无":(s===1?"L⇧":"R⇧"))+'</button>').join("");
+  $("#dlgShiftHint").textContent = del ? "「去除」= 原谱这里没有音符（不是休止）"
+    : unk ? "标成「认不出」后没有音高"
+    : noShift ? "中音档 / 休止没有 Shift 层" : (st.shift?("再上下 "+st.shift+" 个八度"):"不使用 Shift");
+}
+function openEditor(id){
+  const c = cellById(id); if(!c) return;
+  st.id = id; st.shift = shiftOf(c.o||0);
+  st.sel = c.removed ? {del:true}
+        : (c.rest || c.unknown) ? null : {n:c.n, o0:(Math.sign(c.o)||0)};
+  $("#dlgReason").value = st.reasons.get(id) || "";
+  drawDialog();
+  $("#mask").hidden = false;
+}
+function closeEditor(){ $("#mask").hidden = true; st.id = null; }
+
+$("#mask").addEventListener("click", e => { if(e.target === $("#mask")) closeEditor(); });
+$("#dlgX").onclick = closeEditor;
+$("#dlgCancel").onclick = closeEditor;
+$("#dlgKeys").addEventListener("click", e => {
+  const k = e.target.closest(".key"); if(!k) return;
+  st.sel = k.dataset.del ? {del:true}
+         : k.dataset.unk ? {unk:true}
+         : (k.dataset.n==="0" ? {n:0,o0:0} : {n:+k.dataset.n, o0:+k.dataset.o});
+  if(k.dataset.del || k.dataset.unk || k.dataset.n==="0") st.shift = 0;
+  drawDialog();
+});
+$("#dlgShift").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b || b.disabled) return;
+  st.shift = +b.dataset.s; drawDialog();
+});
+$("#dlgReset").onclick = () => {
+  const c = cellById(st.id);
+  restoreCell(c);            // 若之前「去除」过，先把 note 放回 payload
+  st.sel = (c.origN===null||c.origN===undefined) ? null
+         : (c.origN===0 ? {n:0,o0:0} : {n:c.origN, o0:(Math.sign(c.origO)||0)});
+  st.shift = shiftOf(c.origO||0);
+  $("#dlgReason").value = "";
+  st.reasons.delete(st.id);
+  drawDialog();
+};
+$("#dlgSave").onclick = () => {
+  if(!st.sel){ alert("先选一个字母键，或「休止」/「认不出」/「去除」。"); return; }
+  const c = cellById(st.id), id = st.id;
+  const reason = $("#dlgReason").value.trim();
+  if(reason) st.reasons.set(id, reason);
+  const oldv = {n:(c.origN === undefined ? null : c.origN), o:(c.origO||0)};
+  if(st.sel.del){
+    removeCell(c);
+    st.edits.set(id, {id, line:lineById(id), index:idxById(id), old:oldv,
+                      new:{removed:true}, reason});
+  }else{
+    const n = st.sel.unk ? null : st.sel.n;
+    const o = st.sel.unk ? 0 : finalO(st.sel.o0, st.shift);
+    patchCell(c, n, o);
+    st.edits.set(id, {id, line:lineById(id), index:idxById(id), old:oldv, new:{n,o}, reason});
+  }
+  closeEditor(); paint(); updateExport();
+  flash("已改（本页）。点右上「导出改动」下载改好的 JSON。");
+};
+function patchCell(c, n, o){
+  c.removed = false;
+  c.n = n; c.o = o;
+  c.unknown = (n===null); c.rest = (n===0);
+  c.ch = n===null ? "Q" : n===0 ? "0" : letterNO(n,o).ch;
+  c.band = n===null ? "unknown" : n===0 ? "rest" : (o<0?"low":o===0?"mid":"high");
+  c.mod = (o<=-2||o>=2) ? (Math.abs(o)===2?"L⇧":"R⇧") : "";
+  c._edited = true;
+  for(const L of (DATA.payload.lines||[])) for(const nt of (L.notes||[]))
+    if(String(nt.id) === c.id){ nt.n = n; nt.o = o; }
+}
+/* 「去除」：把这条 note 从 `DATA.payload` 里**删掉**（记下原位置以便撤销）。
+   ⚠ 下游 `review_io.load_review` 是按 beams/dotted/extend **重算时值**的，
+   所以删掉它 = 这一小节少一拍/半拍 —— 对"这个块根本不是音符"正是想要的。*/
+function removeCell(c){
+  for(const L of (DATA.payload.lines||[])){
+    const arr = L.notes || [];
+    const i = arr.findIndex(nt => String(nt.id) === String(c.id));
+    if(i >= 0){ c._origNote = arr[i]; c._rmLine = L; c._rmIdx = i; arr.splice(i, 1); }
+  }
+  c.removed = true; c.n = null; c.o = 0;
+  c.unknown = false; c.rest = false; c.band = "removed"; c.mod = "";
+  c._edited = true;
+}
+function restoreCell(c){          // 撤销「去除」：放回 payload，再按原值重算
+  if(!c.removed) return;
+  if(c._origNote && c._rmLine){
+    const arr = c._rmLine.notes || [];
+    if(!arr.some(nt => String(nt.id) === String(c.id)))
+      arr.splice(Math.min(c._rmIdx, arr.length), 0, c._origNote);
+  }
+  c.removed = false;
+  patchCell(c, (c.origN === undefined ? null : c.origN), (c.origO || 0));
+}
+function updateExport(){
+  const b = $("#btnExport"); b.hidden = st.edits.size===0;
+  b.textContent = "导出改动 ("+st.edits.size+")";
+}
+function flash(msg){
+  let el = $("#toast");
+  if(!el){ el = document.createElement("div"); el.id = "toast";
+    el.style.cssText = "position:fixed;left:50%;bottom:26px;transform:translateX(-50%);"
+      + "background:#20242e;border:1px solid #3b4354;color:#e6e9ef;padding:10px 16px;"
+      + "border-radius:9px;font-size:13px;z-index:60";
+    document.body.appendChild(el); }
+  el.textContent = msg; el.style.display = "block";
+  clearTimeout(flash._t); flash._t = setTimeout(() => { el.style.display = "none"; }, 2800);
+}
+$("#btnEdit").onclick = () => {
+  st.on = !st.on;
+  document.body.classList.toggle("editing", st.on);
+  $("#btnEdit").textContent = st.on ? "退出校谱" : "校谱修改";
+  if(!st.on) closeEditor();
+};
+$("#btnExport").onclick = () => {
+  const base = (DATA.title || "score").replace(/[\\/:*?"<>|]/g, "_");
+  dl(JSON.stringify(DATA.payload, null, 2), base + "_review.json");
+  dl(JSON.stringify({review: DATA.reviewPath, edits: [...st.edits.values()]}, null, 2),
+     base + ".edits.json");
+  flash("已导出改好的 _review.json 与 .edits.json");
+};
+$("#btnExport").hidden = true;
+
+paint();
+</script>
+</body>
+</html>

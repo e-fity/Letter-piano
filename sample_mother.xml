@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="3.1">
+  <work>
+    <work-title>世上只有妈妈好（测试样例）</work-title>
+  </work>
+  <part-list>
+    <score-part id="P1">
+      <part-name>旋律</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <!-- ♭E 大调，4/4。divisions=2：四分音符=2，八分=1，附点四分=3，二分=4 -->
+
+    <!-- 第1小节：中6(附点) 中5(八分) 中3 中5 -->
+    <measure number="1">
+      <attributes>
+        <divisions>2</divisions>
+        <key>
+          <fifths>-3</fifths>
+          <mode>major</mode>
+        </key>
+        <time>
+          <beats>4</beats>
+          <beat-type>4</beat-type>
+        </time>
+      </attributes>
+      <barline location="left">
+        <repeat direction="forward"/>
+      </barline>
+      <note>
+        <pitch><step>C</step><octave>5</octave></pitch>
+        <duration>3</duration>
+        <type>quarter</type>
+        <dot/>
+      </note>
+      <note>
+        <pitch><step>B</step><alter>-1</alter><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>eighth</type>
+      </note>
+      <note>
+        <pitch><step>G</step><octave>4</octave></pitch>
+        <duration>2</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>B</step><alter>-1</alter><octave>4</octave></pitch>
+        <duration>2</duration>
+        <type>quarter</type>
+      </note>
+    </measure>
+
+    <!-- 第2小节：高1 中6(八分) 中5(八分) 中6(二分)，高1→中6 连音 -->
+    <measure number="2">
+      <note>
+        <pitch><step>E</step><alter>-1</alter><octave>5</octave></pitch>
+        <duration>2</duration>
+        <type>quarter</type>
+        <notations>
+          <slur type="start" number="1"/>
+        </notations>
+      </note>
+      <note>
+        <pitch><step>C</step><octave>5</octave></pitch>
+        <duration>1</duration>
+        <type>eighth</type>
+        <notations>
+          <slur type="stop" number="1"/>
+        </notations>
+      </note>
+      <note>
+        <pitch><step>B</step><alter>-1</alter><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>eighth</type>
+      </note>
+      <note>
+        <pitch><step>C</step><octave>5</octave></pitch>
+        <duration>4</duration>
+        <type>half</type>
+      </note>
+    </measure>
+
+    <!-- 第3小节：低5(延音两拍) 低6 休止 -->
+    <measure number="3">
+      <note>
+        <pitch><step>B</step><alter>-1</alter><octave>3</octave></pitch>
+        <duration>2</duration>
+        <tie type="start"/>
+        <type>quarter</type>
+        <notations>
+          <tied type="start"/>
+        </notations>
+      </note>
+      <note>
+        <pitch><step>B</step><alter>-1</alter><octave>3</octave></pitch>
+        <duration>2</duration>
+        <tie type="stop"/>
+        <type>quarter</type>
+        <notations>
+          <tied type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <pitch><step>C</step><octave>4</octave></pitch>
+        <duration>2</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <type>quarter</type>
+      </note>
+    </measure>
+
+    <!-- 第4小节：中1 休止 中1 休止，反复结束 -->
+    <measure number="4">
+      <note>
+        <pitch><step>E</step><alter>-1</alter><octave>4</octave></pitch>
+        <duration>2</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>E</step><alter>-1</alter><octave>4</octave></pitch>
+        <duration>2</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <type>quarter</type>
+      </note>
+      <barline location="right">
+        <repeat direction="backward"/>
+      </barline>
+    </measure>
+  </part>
+</score-partwise>
