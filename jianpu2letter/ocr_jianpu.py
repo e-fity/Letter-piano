@@ -2179,6 +2179,7 @@ def ocr_to_stream(image_path, debug_dir=None, measure_mode="vline", header_ocr=T
     # （曾表现为「两行谱只识出一行」）。改为按字符位置截出数字那一段来用。
     tokens = []
     text_tokens = []   # 纯文字块（含汉字且完全不含数字）：用于识别"文字行"
+    _n_pure_text = _n_mixed = 0
     for box, text, sc in raw_items:
         xs = [float(p[0]) * sc for p in box]
         ys = [float(p[1]) * sc for p in box]
@@ -2190,10 +2191,12 @@ def ocr_to_stream(image_path, debug_dir=None, measure_mode="vline", header_ocr=T
             # 字之间留了空档），以前要求 `len >= 2` 会把它整块丢掉，表现就是"行首的歌词字
             # 不见了"。判据直接用 `_contains_cjk`（只认汉字段，标点/拉丁字母仍当噪声）。
             if _contains_cjk(text):
+                _n_pure_text += 1
                 text_tokens.append({"x0": x0, "x1": x1, "y0": y0, "y1": y1,
                                     "cy": (y0 + y1) / 2, "text": text})
             continue
         if mixed:
+            _n_mixed += 1
             idxs = [i for i, ch in enumerate(text) if _is_digit_char(ch) or ch in "ilI"]
             if not idxs:
                 continue
@@ -2255,6 +2258,9 @@ def ocr_to_stream(image_path, debug_dir=None, measure_mode="vline", header_ocr=T
                 break
         if not dup:
             deduped.append(t)
+    if VERBOSE_DEBUG:
+        print(f"  [txt] OCR 原始块 {len(raw_items)}：纯文字(含汉字、无数字) {_n_pure_text}；"
+              f"混排(含数字) {_n_mixed} → text_tokens(去重前) {len(text_tokens)}")
     tokens = deduped
 
     # 同一件事**也要对纯汉字块（歌词）做一遍**——上面那次漏了它们，
@@ -2282,7 +2288,11 @@ def ocr_to_stream(image_path, debug_dir=None, measure_mode="vline", header_ocr=T
                 break
         if not dup:
             deduped_text.append(t)
+    _n_pre = len(text_tokens)
     text_tokens = deduped_text
+    if VERBOSE_DEBUG:
+        print(f"  [txt] 纯文字块去重：{_n_pre} → {len(text_tokens)}；"
+              f"cy 一览={sorted(round(t['cy']) for t in text_tokens)}")
 
     # 所有连通块：较大的用于数字，小的用于点/线。
     count, _labels, stats, _centroids = cv2.connectedComponentsWithStats(binary, connectivity=8)
@@ -3086,24 +3096,41 @@ def ocr_to_stream(image_path, debug_dir=None, measure_mode="vline", header_ocr=T
                       f"（各段块数 {[len(b) for b in verses[:MAX_LYRIC_VERSES]]}）")
             for vi, band in enumerate(verses[:MAX_LYRIC_VERSES]):
                 field = "lyric" if vi == 0 else "lyric%d" % (vi + 1)
+                # 摊成「逐字 + 估计 x」（同一块内按字均匀估 x —— 汉字近似等宽）
+                chars = []
                 for tk in band:
                     text = tk["text"]
                     if not text:
                         continue
                     span = tk["x1"] - tk["x0"]
                     for ci, ch in enumerate(text):
-                        if not ch.strip():
-                            continue
-                        xc = tk["x0"] + span * (ci + 0.5) / max(len(text), 1)
-                        best = min(row_notes, key=lambda nd: abs(nd["cx"] - xc))
-                        if VERBOSE_DEBUG:
-                            _dh = abs(best["cx"] - xc) / H
-                            if _dh > 1.0:
-                                print(f"  [lyr] 行{row_index + 1} 段{vi + 1} 块'{text}' ch={ch} "
-                                      f"xc={xc:.0f} 最近音cx={best['cx']:.0f} 距={_dh:.2f}H "
-                                      f"{'附着' if _dh <= 1.3 else '丢弃'}")
-                        if abs(best["cx"] - xc) <= 1.3 * H:
-                            best[field] = (best.get(field) or "") + ch
+                        if ch.strip():
+                            chars.append((tk["x0"] + span * (ci + 0.5) / max(len(text), 1), ch))
+                if not chars:
+                    continue
+                chars.sort(key=lambda t: t[0])
+                # **首尾锚点 + 中间保序**（用户 2026-09-29 选定；全库 A/B 数据见下）。
+                #
+                # 旧做法是"逐字取 x 最近的音"，两个假设都不牢：
+                #   · 谱面的**音距不等于字距** —— 长音占的 x 宽，字却在整行里均匀排；
+                #   · 于是"长音"会一次抢走两个字，紧跟它后面的那个音就**空着**，错位再连锁传下去
+                #     （25.jpg 行2 实测：`在学爱爱情情里` 里 `学爱` 挤在一音、后面空一格 ✗）。
+                # 改成：两端各用 x 找一个**锚点音**（兜"前后有休止、没词"的情况），中间按序号
+                # **单调**铺开 —— 误差被摊到句末，不再连锁。实测（全库 51 张、614 个"行×段"）：
+                #   洞      2041 → 1430
+                #   多字音   657 → 262
+                #   丢字     251 → 0     ← 旧做法会把离任何音 >1.3 字高的字丢掉，连 `(国:)` 这种都丢
+                #   其中"字==音"的 29 段（本来就该一字一音）：洞 **45 → 0**
+                # ⚠ 保序的前提是"字序与音序一致"；真的错位（音字本就不对应）会被它摊平而看不出——
+                #   数据里没有这种证据（洞是减少不是转移），且两端锚点能防整体漂移。
+                i0 = min(range(len(row_notes)), key=lambda j: abs(row_notes[j]["cx"] - chars[0][0]))
+                i1 = min(range(len(row_notes)), key=lambda j: abs(row_notes[j]["cx"] - chars[-1][0]))
+                if i1 < i0:
+                    i0, i1 = i1, i0
+                n = len(chars)
+                for k, (_xc, ch) in enumerate(chars):
+                    nt = row_notes[i0 if n == 1 else i0 + int(round(k * (i1 - i0) / (n - 1)))]
+                    nt[field] = (nt.get(field) or "") + ch
 
         labeled = sum(n["n"] is not None for n in notes)
         ratio = labeled / max(len(notes), 1)
