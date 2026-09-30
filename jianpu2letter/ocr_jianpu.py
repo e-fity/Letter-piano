@@ -1814,9 +1814,21 @@ ROW_OVERSIZE_MAX = 1.90
 ROW_HANZI_MIN = 2
 # ⚠ 这两条对**末行**要放宽：谱子没结束（还没见到 `‖`）时，后面的行必须还是旋律行，
 #    哪怕它又矮又短。放宽逻辑在 `_rows_from_blocks()` 的"末行放宽"那段。
-# 假休止复核：判成 0 的音，若"形状最像的那个数字"不是 0、且分数 ≥ 此值 → 改判成那个数字。
-# 实测 4 个假休止（6 被误判）的形状分是 0.80~0.88，而 56 个真休止"最像的都是 0"
-# （0.76~0.94）→ 取 0.75，两侧都留有余量。
+# 假休止复核（判成 0 的音里挑出"被误判成休止的数字"）—— 判据两步走，见调用处的长注释：
+#   ① **孔比可疑**：本块孔比 < `FAKE_REST_HOLE_FACTOR` ×（本图**其它** 0 块的孔比最小值）。
+#      `0` 必须有明显的封闭内孔，孔比离群地小就不是 `0`。基准取**本图自己的最小值**、
+#      不用固定阈值：孔比受字号/字重影响极大（实测 42/45 的真 0 是 0.211~0.235，
+#      51 的降到 0.113），固定阈值换谱就碎 —— 这条路已经栽过两次。
+#   ② 过了第 ① 步再问"最像谁"：argmax ≠ 0 → 改判它；argmax=0 但与 `6` 差 < `FAKE_REST_TIE` → 改判 6。
+# ⚠ 第 ① 步**不能省**：实测只看 argmax 会把 10 个（孔比 0.21~0.235 的）真 `0` 改成 `1`/`6`
+#   —— 那些 argmax 的领先幅度只有 0.008~0.031，纯属噪声。
+FAKE_REST_HOLE_FACTOR = 0.7
+FAKE_REST_TIE = 0.01
+# `FAKE_REST_MIN_SCORE`：假休止复核的**第一判据**（形状分够高就直接改判）。
+# ⚠ 它**仍在用、且不能删**：全库实测 7.png 两块、14.jpg 一块、22.jpg 一块靠它修对；
+#   2026-09-29 我第一次重写时误把它删掉，那 4 块立刻退回 `0`（全库 A/B 抓到）。
+#   它只是**覆盖不到小字号扫描件**：那类图的形状分整体只有 0.5~0.55，
+#   永远够不着 0.75（43/51 那两个真 `6` 就是如此），所以下面才补了第 ② 条相对判据。
 FAKE_REST_MIN_SCORE = 0.75
 # 「底部粘着减时线」的补救：16 分音符密集行里，减时线常与数字底部连成一个连通块，
 # 块被撑高 → 归一化后形状里多一条厚底边 → 跟任何参照字形都对不上（判成 `?`）。
@@ -2644,26 +2656,84 @@ def ocr_to_stream(image_path, debug_dir=None, measure_mode="vline", header_ocr=T
         print(f"[ocr] 0/6 复核被形状分类器拦下 {zero_six_held} 个"
               f"（两票想改，第三票不支持）")
 
-    # 「假休止」复核（用户 2026-09-21 报"6 被标记成 0 无法识别"，7.png 与 14.jpg 上都有）：
+    # 「假休止」复核（用户 2026-09-21 报"6 被标记成 0 无法识别"；2026-09-29 用户拿
+    #  43.jpg / 51.png 两块具体案例要求重做）：
     # 判成 0 的音里混着**被误判成休止的数字** —— 原位替换图上它们既换不成字母、也留不下数字。
-    # 用「形状最像哪个数字」复核：真休止最像的当然是 0（实测 56 个真 0 的形状分 0.76~0.94），
-    # 而误判的那 4 个最像 6（0.80~0.88）→ 直接把值改成它最像的那个数字。
+    #
+    # 旧版（"形状最像谁" + `score >= FAKE_REST_MIN_SCORE`）**对这两块从没生效过**：
+    #   · 43.jpg 那个真 `6`：形状 `6`=0.671 vs `0`=0.657，**余量 0.014**，卡在
+    #     `_classify_by_reference` 的 `min_margin=0.03` → 返回 None；
+    #   · 51.png 那个真 `6`：`0`=0.677 vs `6`=0.674，**余量 0.003** → 同样返回 None。
+    #   而且绝对分（0.671 / 0.677）都够不着 0.75 —— 那门槛是在"数字分 0.76+"的谱上定的。
+    #
+    # 判据与原有那条**取并集**（任一成立就改判）：
+    #   ① 原有：形状分 ≥ `FAKE_REST_MIN_SCORE`（0.75）→ 高分场景，可靠，**保留**。
+    #   ② 新增：**孔比离群地小** —— 本块孔比 < `FAKE_REST_HOLE_FACTOR` ×
+    #      （本图**其它** 0 块的孔比最小值）。`0` 必须有明显的封闭内孔，孔比离群地小就不是 `0`。
+    #      基准用**本图自己的最小值**、不用固定阈值 —— 孔比受字号/字重影响极大
+    #      （42/45 的真 0 是 0.211~0.235，51 的降到 0.113，而 43 的假 0 是 0.137），
+    #      任何固定阈值都会被跨谱的分布重叠切穿。
+    #      过了这关再问"最像谁"（用**不设门槛**的 `_reference_scores`）：argmax ≠ 0 → 改判它；
+    #      argmax = 0 但与 `6` 差 < `FAKE_REST_TIE` → 改判 `6`。
+    #      ⚠ 这关**不能省**：实测只看 argmax 会把 10 个（孔比 0.211~0.235 的真 `0`）改成
+    #      `1`/`6` —— 那些 argmax 的领先幅度只有 0.008~0.031，纯属噪声。
+    #
+    # 全库离线评估（51 张）：孔比可疑块仅 3 个；与①并集后**净增改判 2 个** —— 恰好是
+    # 43/51 那两个真 `6`，且不丢原有①修好的任何一块（这一点是被 A/B 抓出来的，见 FAKE_REST_MIN_SCORE 处）。
     # ⚠ 必须放在 0/6 复核**之后**：那一步正是把 14.jpg 行1 那个真 6 改成 0 的元凶
     # （它用的"上下墨量对称"在密集小字上恒为 0、退化成只看内孔），这里把形状证据补回来。
     fake_rest_fixed = 0
     refs_all = _all_reference_glyphs()
+
+    def _hole_ratio(blk):
+        return (_hole_class(blk, binary, return_detail=True)[1] or {}).get("ratio")
+
+    zero_holes = {}                 # id(block) -> 孔比；存字典才方便"排除自己"取其它 0 的最小值
+    for record in row_records:
+        for block, value in zip(record["blocks"], record["values"]):
+            if value == 0:
+                r = _hole_ratio(block)
+                if r is not None:
+                    zero_holes[id(block)] = r
+
     for record in row_records:
         for i, (block, value) in enumerate(zip(record["blocks"], record["values"])):
             if value != 0:
                 continue
-            digit, score = _classify_by_reference(block, binary, refs_all,
-                                                  return_score=True)
-            if digit not in (None, 0) and score >= FAKE_REST_MIN_SCORE:
-                record["values"][i] = digit
-                fake_rest_fixed += 1
-                if VERBOSE_DEBUG:
-                    print(f"  [0?] x={block['x']:.0f} 判成休止，但形状最像 {digit}"
-                          f"（{score:.2f}）→ 改判 {digit}")
+            # ① 原有判据（**保留**）：形状分够高就直接改判。
+            #    它在"高分场景"是有效的 —— 实测 7.png 两块、14.jpg 一块、22.jpg 一块靠它修对。
+            #    ⚠ 2026-09-29 我第一次重写时**把它删掉了**，于是那 4 块退回 `0`（全库 A/B 抓到）。
+            digit, score = _classify_by_reference(block, binary, refs_all, return_score=True)
+            new = digit if (digit not in (None, 0) and score >= FAKE_REST_MIN_SCORE) else None
+            if new is None:
+                # ② 新增判据：小字号扫描件的形状分整体只有 0.5~0.55，绝对门槛 0.75 永远够不着，
+                #    于是改用**相对**证据 —— 孔比是否离群地小（`0` 必须有明显的封闭内孔）。
+                ratio = zero_holes.get(id(block))
+                others = [v for k, v in zero_holes.items() if k != id(block)]
+                if ratio is not None and others and ratio < FAKE_REST_HOLE_FACTOR * min(others):
+                    scores = _reference_scores(block, binary, refs_all)
+                    if scores:
+                        top = sorted(scores.items(), key=lambda kv: -kv[1])
+                        bd, bs = top[0]
+                        sd, ss = top[1] if len(top) > 1 else (None, -1.0)
+                        if bd != 0:
+                            new = bd                          # 形状最像的就不是 0
+                        elif sd == 6 and bs - ss < FAKE_REST_TIE:
+                            new = 6                           # 与 6 打平 → 孔比又可疑 → 判 6
+            if new is None:
+                continue
+            record["values"][i] = new
+            # 打标记：告诉后面的「5/6 复核」别管这块。
+            # 两条规则**从同一份孔比证据推出相反结论** —— 这里判"孔比离群地小 → 不是 0 → 是 6"，
+            # 而 5/6 复核看到"标为 6 却没有内孔 → 必是 5"。对 51.png 那块（孔比 0.035、
+            # 形状 0(0.677)/6(0.674)、`5` 连前三都进不去）后者是错的：它是 `6` 不是 `5`。
+            # 与其改 5/6 复核（那要动它在全库的行为，得先严谨测量），不如让**它让路** ——
+            # 标记只出现在本复核改判过的那几块上（全库实测仅 2 块），对其它块零影响。
+            block["_from_fake_rest"] = True
+            fake_rest_fixed += 1
+            if VERBOSE_DEBUG:
+                print(f"  [0?] x={block['x']:.0f} 判成休止 → 改判 {new}"
+                      f"（形状 {digit}({score:.3f})；孔比 {zero_holes.get(id(block))}）")
     if fake_rest_fixed:
         print(f"[ocr] 假休止复核：{fake_rest_fixed} 个休止改判成数字")
 
@@ -2730,6 +2800,11 @@ def ocr_to_stream(image_path, debug_dir=None, measure_mode="vline", header_ocr=T
     for record in row_records:
         for i, (block, value) in enumerate(zip(record["blocks"], record["values"])):
             if value != 6:
+                continue
+            if block.get("_from_fake_rest"):
+                # 「假休止复核」刚把这块 0→6 的：它凭的正是"孔比离群地小"这条证据，
+                # 而本规则把同一条证据读成"没有内孔 → 是 5" —— 同源反判，本规则让路。
+                # 实测（51.png 那块）：形状 `0`(0.677)/`6`(0.674)、`5` 不在前三 → 确是 `6`。
                 continue
             _hv, hole = _hole_class(block, binary, return_detail=True)
             ratio = (hole or {}).get("ratio")
