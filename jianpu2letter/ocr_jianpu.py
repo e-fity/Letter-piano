@@ -1830,6 +1830,10 @@ FAKE_REST_TIE = 0.01
 #   它只是**覆盖不到小字号扫描件**：那类图的形状分整体只有 0.5~0.55，
 #   永远够不着 0.75（43/51 那两个真 `6` 就是如此），所以下面才补了第 ② 条相对判据。
 FAKE_REST_MIN_SCORE = 0.75
+# 多段歌词：一份谱常把 2~3 段词**叠排**在同一竖位（12.jpg 两段、51.png 三段）。
+# 第 1 段仍写进 `lyric`（下游全部沿用、零改动），第 2/3 段写 `lyric2` / `lyric3`；
+# 段数上限就是它（再多也只取前几段）。
+MAX_LYRIC_VERSES = 3
 # 「底部粘着减时线」的补救：16 分音符密集行里，减时线常与数字底部连成一个连通块，
 # 块被撑高 → 归一化后形状里多一条厚底边 → 跟任何参照字形都对不上（判成 `?`）。
 # 实测 14.jpg 行2 那个 `2̇`：块高 51（同图正常数字 43）、与参照 2 的相关仅 0.48；
@@ -3047,39 +3051,59 @@ def ocr_to_stream(image_path, debug_dir=None, measure_mode="vline", header_ocr=T
             })
 
         # 歌词对齐：把这一行下方的汉字**逐字**分配给位置最近的音符。
-        # 音符的 lyric 字段与渲染函数早已支持（会画在音符正下方），
-        # 只是识别端此前没有填。歌词在音符下方约 0.5-3.5 倍字高范围。
+        # 音符的字段与渲染函数早已支持（会画在音符正下方）。歌词在音符下方约 0.5-3.5 倍字高范围。
+        #
+        # **多段歌词**：一份谱常把 2~3 段词叠排在同一竖位（12.jpg 两段、51.png 三段）。
+        # 按 y 把文本块**聚类成段** —— 段间有明显空档（约 1.2 个字高）、段内各块的 cy 基本一致
+        # （起伏 ≤0.2 字高），所以"cy 比本段当前的 max 跳变超过 0.6 字高就换段"两侧余量都在 2 倍以上。
+        # 第 1 段仍写 `lyric`（下游全部沿用、零改动），第 2/3 段写 `lyric2` / `lyric3`。
+        # ⚠ 谱面上每段开头的段号（`1.` `2.`）**不特殊处理**（用户 2026-09-29 选定）——
+        #   它会作为普通汉字混进那一段的歌词串里。
         if text_tokens and notes:
             row_bottom = max(b["y"] + b["h"] for b in blocks)
+            # 窗口下界取「**下一行数字的顶部**」（歌词不会长到下一行里去），末行兜底 8 个字高。
+            # ⚠ 不能沿用固定的"3.5 倍字高"：实测**段间距 ≈2.1H、行间距只有 ≈5.7H** ——
+            #   够得着第 2 段（+4.0H）就得把窗口放宽，而放宽到 5.7H 就会把**下一行的歌词**
+            #   卷进来当成第 2 段（第一版就是这么错的：3.5H 窗口下 12.jpg 只有 3 个音拿到 lyric2）。
+            #   用下一行顶部当界，行距随歌词段数自动伸缩，换谱不用调数。
+            _nxt_top = float("inf")
+            if row_index + 1 < len(row_records):
+                _nb = row_records[row_index + 1].get("blocks") or []
+                if _nb:
+                    _nxt_top = min(b["y"] for b in _nb)
+            limit = min(row_bottom + 8 * H, _nxt_top - 0.3 * H)
             cand = [t for t in text_tokens
-                    if row_bottom <= t["cy"] <= row_bottom + 3.5 * H]
-            # 只取**最上面那一段**歌词：一份谱常有三段歌词叠排在同一竖位
-            # （如 `1.浪奔 2.(是)喜 3.(又有)喜`），全取会把三段叠到同一批音符下，
-            # 表现为"浪浪""爱爱"这种重复。
-            if cand:
-                # 只取**最上面那一段**歌词：以最上面那个块为基准，取 0.5 倍字高内
-                # 的所有块。（三段歌词排得密时，这个窗口比"串链式"更稳。）
-                top_cy = min(t["cy"] for t in cand)
-                cand = [t for t in cand if t["cy"] - top_cy <= 0.5 * H]
+                    if row_bottom <= t["cy"] <= limit]
+            verses = []
+            for tk in sorted(cand, key=lambda t: t["cy"]):
+                if verses and tk["cy"] - verses[-1][-1]["cy"] <= 0.6 * H:
+                    verses[-1].append(tk)
+                else:
+                    verses.append([tk])
             row_notes = sorted(notes, key=lambda nd: nd["cx"])
-            for tk in cand:
-                text = tk["text"]
-                if not text:
-                    continue
-                span = tk["x1"] - tk["x0"]
-                for ci, ch in enumerate(text):
-                    if not ch.strip():
+            if VERBOSE_DEBUG:
+                print(f"  [lyr] 行{row_index + 1} 候选文本块 {len(cand)} → 分成 {len(verses)} 段"
+                      f"（各段块数 {[len(b) for b in verses[:MAX_LYRIC_VERSES]]}）")
+            for vi, band in enumerate(verses[:MAX_LYRIC_VERSES]):
+                field = "lyric" if vi == 0 else "lyric%d" % (vi + 1)
+                for tk in band:
+                    text = tk["text"]
+                    if not text:
                         continue
-                    xc = tk["x0"] + span * (ci + 0.5) / max(len(text), 1)
-                    best = min(row_notes, key=lambda nd: abs(nd["cx"] - xc))
-                    if VERBOSE_DEBUG:
-                        _dh = abs(best["cx"] - xc) / H
-                        if _dh > 1.0:
-                            print(f"  [lyr] 行{row_index + 1} 块'{text}' ch={ch} xc={xc:.0f} "
-                                  f"最近音cx={best['cx']:.0f} 距={_dh:.2f}H "
-                                  f"{'附着' if _dh <= 1.3 else '丢弃'}")
-                    if abs(best["cx"] - xc) <= 1.3 * H:
-                        best["lyric"] = (best.get("lyric") or "") + ch
+                    span = tk["x1"] - tk["x0"]
+                    for ci, ch in enumerate(text):
+                        if not ch.strip():
+                            continue
+                        xc = tk["x0"] + span * (ci + 0.5) / max(len(text), 1)
+                        best = min(row_notes, key=lambda nd: abs(nd["cx"] - xc))
+                        if VERBOSE_DEBUG:
+                            _dh = abs(best["cx"] - xc) / H
+                            if _dh > 1.0:
+                                print(f"  [lyr] 行{row_index + 1} 段{vi + 1} 块'{text}' ch={ch} "
+                                      f"xc={xc:.0f} 最近音cx={best['cx']:.0f} 距={_dh:.2f}H "
+                                      f"{'附着' if _dh <= 1.3 else '丢弃'}")
+                        if abs(best["cx"] - xc) <= 1.3 * H:
+                            best[field] = (best.get(field) or "") + ch
 
         labeled = sum(n["n"] is not None for n in notes)
         ratio = labeled / max(len(notes), 1)

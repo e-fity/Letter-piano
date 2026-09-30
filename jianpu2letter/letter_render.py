@@ -25,6 +25,17 @@ CJK_FONT_CANDIDATES = [
 X_PER_QUARTER = 1.6
 OCR_LINE_WIDTH = 64.0
 LINE_GAP = 2.9
+# 多段歌词：每多一段，该行再额外占这么高（与 `_draw_note` 里画歌词的行距是同一个数）。
+LYRIC_LINE_STEP = 1.05
+
+
+def _verse_count(notes):
+    """这一行要画几段歌词（1~3）：看有没有 `lyric2` / `lyric3`。"""
+    if any(n.get("lyric3") for n in notes):
+        return 3
+    if any(n.get("lyric2") for n in notes):
+        return 2
+    return 1
 
 
 def _find_cjk_font():
@@ -79,11 +90,12 @@ def _draw_letter(ax, x, y, item, cjk_font):
         ax.plot(x + 0.36, y - 0.08, "ko", markersize=3.0)
     # 延时线由 _draw_extends 统一绘制（需知道下一个音符位置，才能铺满时值区）
 
-    # 歌词：画在字母正下方（与数字谱一致）
-    lyric = item.get("lyric")
-    if lyric:
-        ax.text(x, y - 1.15, lyric, ha="center", va="top", fontsize=10,
-                color="0.2", fontfamily=cjk_font or "sans-serif")
+    # 歌词：画在字母正下方（与数字谱一致）；多段依次往下叠，行距同 jianpu_render
+    for vi, key in enumerate(("lyric", "lyric2", "lyric3")):
+        lyric = item.get(key)
+        if lyric:
+            ax.text(x, y - 1.15 - vi * LYRIC_LINE_STEP, lyric, ha="center", va="top",
+                    fontsize=10, color="0.2", fontfamily=cjk_font or "sans-serif")
 
 
 def render(measures, out_path, title="", key_mark="", meter="",
@@ -113,11 +125,20 @@ def render(measures, out_path, title="", key_mark="", meter="",
         lines = [[]]
 
     n_lines = len(lines)
-    fig, ax = plt.subplots(figsize=(16, 1.4 + 1.15 * n_lines))
+    # 每行的 y **按行累加**（同 jianpu_render.render 里的说明）：多段歌词的行要占更多高度，
+    # 否则 3 段词会压到下一行的数字上。
+    line_top = []
+    _cur = 0.0
+    for _lm in lines:
+        line_top.append(_cur)
+        _extra = LYRIC_LINE_STEP * (_verse_count(
+            [item for m in _lm for item in m.get("notes", [])]) - 1)
+        _cur += LINE_GAP + _extra
+    fig, ax = plt.subplots(figsize=(16, 1.4 + 0.397 * _cur))
     ax.axis("off")
 
     for li, line_measures in enumerate(lines):
-        y = -li * LINE_GAP
+        y = -line_top[li]
         line_notes = [item for m in line_measures for item in m.get("notes", [])]
         cells_mode = bool(ocr_mode and line_notes
                           and all(item.get("cx") is not None for item in line_notes))
@@ -252,7 +273,7 @@ def render(measures, out_path, title="", key_mark="", meter="",
                      for lm in lines] or [10.0])
 
     ax.set_xlim(-0.6, max_x + 0.8)
-    ax.set_ylim(-(n_lines - 1) * LINE_GAP - 1.9, 2.2)
+    ax.set_ylim(-line_top[-1] - 1.9, 2.2)
     plt.tight_layout()
     fig.savefig(out_path, dpi=dpi, bbox_inches="tight", facecolor="white")
     plt.close(fig)

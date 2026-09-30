@@ -58,6 +58,10 @@ def save_review(path, measures, title, key_mark, meter, source_image=""):
                     "slur_id": (int(note["slur_start"][0])
                                 if note.get("slur_start") else 0),
                     "lyric": note.get("lyric") or "",
+                    # 多段歌词的第 2/3 段（第 1 段仍是 `lyric`，既有格式不变）。
+                    # 必须**存也读**，否则"从审核 JSON 重渲染"时它们会像歌词那样静默丢失。
+                    "lyric2": note.get("lyric2") or "",
+                    "lyric3": note.get("lyric3") or "",
                     "paren_before": bool(note.get("paren_before", False)),
                     "paren_after": bool(note.get("paren_after", False)),
                     # 重音记号 `>`（数字上方的小 V）。必须**存也读**，
@@ -201,6 +205,9 @@ def load_review(path):
                 "q": round(q, 4),
                 "markup": {"beams": beams, "dotted": dotted, "extend": extend},
                 "lyric": str(raw.get("lyric") or ""),
+                # 多段歌词：老 JSON 没有这两个键 → 取成 ""（向后兼容）。
+                "lyric2": str(raw.get("lyric2") or ""),
+                "lyric3": str(raw.get("lyric3") or ""),
                 "slur_start": _slur_start,
                 "slur_stop": [],
                 "cx": float(raw.get("source_x", len(current))),

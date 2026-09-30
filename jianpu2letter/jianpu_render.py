@@ -23,7 +23,19 @@ CJK_FONT_CANDIDATES = [
 
 X_PER_QUARTER = 1.6   # MusicXML：每个四分音符的横向宽度
 OCR_LINE_WIDTH = 64.0 # 图片 OCR：按原图 x 坐标映射到该宽度，避免短音挤在一起
-LINE_GAP = 2.9        # 行间距（数据单位）
+LINE_GAP = 2.9        # 基础行距（数据单位）
+# 多段歌词：每多一段，该行再额外占这么高（与 `_draw_note` 里画歌词的行距是同一个数）。
+# 3 段词的行因此能拿到 `LINE_GAP + 2*LYRIC_LINE_STEP` 的高度，不会压到下一行的数字上。
+LYRIC_LINE_STEP = 1.05
+
+
+def _verse_count(notes):
+    """这一行要画几段歌词（1~3）：看有没有 `lyric2` / `lyric3`。"""
+    if any(n.get("lyric3") for n in notes):
+        return 3
+    if any(n.get("lyric2") for n in notes):
+        return 2
+    return 1
 
 # 逐音置信度：低于此值的音在输出图里**加黄底**标出（可疑，要人工看一眼）。
 # **必须与 ocr_jianpu.CONF_WARN 一致** —— 那边负责算 conf，这边负责画。
@@ -139,10 +151,13 @@ def _draw_note(ax, x, y, item, cjk_font, draw_dot=True, highlight=False):
 
     # 延时线由 _draw_extends 统一绘制（需要知道下一个音符的位置，才能铺满时值区）
 
-    lyric = item.get("lyric")
-    if lyric:
-        ax.text(x, y - 1.15, lyric, ha="center", va="top", fontsize=10,
-                color="0.2", fontfamily=cjk_font or "sans-serif")
+    # 歌词：第 1 段在音符正下方，第 2/3 段依次再往下叠（多段歌词，见 ocr_jianpu 的
+    # `MAX_LYRIC_VERSES`）。行距取 `LYRIC_LINE_STEP`，与 render() 里算行高用的是同一个数。
+    for vi, key in enumerate(("lyric", "lyric2", "lyric3")):
+        lyric = item.get(key)
+        if lyric:
+            ax.text(x, y - 1.15 - vi * LYRIC_LINE_STEP, lyric, ha="center", va="top",
+                    fontsize=10, color="0.2", fontfamily=cjk_font or "sans-serif")
 
 
 def _draw_note_beams(ax, positioned, y):
@@ -578,7 +593,17 @@ def render(measures, out_path, title="", key_mark="", meter="",
         lines = [[]]
 
     n_lines = len(lines)
-    fig_h = 1.4 + 1.15 * n_lines
+    # 每行的 y **按行累加**，不用固定的 `li * LINE_GAP` —— 多段歌词的行要占更多高度
+    # （每多一段多 `LYRIC_LINE_STEP`），否则 3 段词会压到下一行的数字上
+    # （1.jpg《上海滩》三段词实测三行串在一起）。
+    line_top = []
+    _cur = 0.0
+    for _lm in lines:
+        line_top.append(_cur)
+        _extra = LYRIC_LINE_STEP * (_verse_count(
+            [item for m in _lm for item in m.get("notes", [])]) - 1)
+        _cur += LINE_GAP + _extra
+    fig_h = 1.4 + 0.397 * _cur            # 0.397 = 1.15/2.9，与原公式（每行 1.15）同比例
     fig, ax = plt.subplots(figsize=(16, fig_h))
     ax.axis("off")
 
@@ -586,7 +611,7 @@ def render(measures, out_path, title="", key_mark="", meter="",
     max_bar_x = 0.0     # 各行小节线映射后的最右位置（用于决定画布右边界）
 
     for li, line_measures in enumerate(lines):
-        y = -li * LINE_GAP
+        y = -line_top[li]
         line_notes = [item for m in line_measures for item in m.get("notes", [])]
 
         if ocr_mode and line_notes and all(item.get("cx") is not None for item in line_notes):
@@ -687,7 +712,7 @@ def render(measures, out_path, title="", key_mark="", meter="",
             max_x = max(max_x, t * X_PER_QUARTER)
 
     ax.set_xlim(-0.6, max_x + 0.8)
-    ax.set_ylim(-(n_lines - 1) * LINE_GAP - 1.9, 2.2)
+    ax.set_ylim(-line_top[-1] - 1.9, 2.2)
 
     plt.tight_layout()
     fig.savefig(out_path, dpi=dpi, bbox_inches="tight", facecolor="white")
