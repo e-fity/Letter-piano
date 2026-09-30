@@ -67,18 +67,3 @@ def key_for(n, o, mapping="mapping2"):
         raise ValueError(f"映射1 不支持 n={n}, o={o}")
 
     raise ValueError(f"未知映射 {mapping!r}")
-
-
-def key_to_n_o(key, mapping="mapping2"):
-    """
-    反向查询：给定键位（大写字母）返回 (n, o) 列表（一个键在映射2中唯一对应一个 n,o；
-    映射1 中可能对应多个，故返回列表）。
-    """
-    key = str(key).upper()
-    result = []
-    table = MAPPING2 if mapping == "mapping2" else MAPPING1
-    for o, deg_map in table.items():
-        for n, k in deg_map.items():
-            if k == key:
-                result.append((n, o))
-    return result
