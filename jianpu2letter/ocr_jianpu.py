@@ -1834,6 +1834,10 @@ FAKE_REST_MIN_SCORE = 0.75
 # 第 1 段仍写进 `lyric`（下游全部沿用、零改动），第 2/3 段写 `lyric2` / `lyric3`；
 # 段数上限就是它（再多也只取前几段）。
 MAX_LYRIC_VERSES = 3
+# 歌词里**并入相邻音节槽**的标点（不独占一个音）—— 用户 2026-09-30 指出。
+# 除了"标点不该占一个音的时值"，更关键的是：**槽数相等是三段词能互相对齐的前提**，
+# 而每段的"字数"会因标点多少而不同（实测《上海滩》三段是 13/12/14 字），槽数才稳定相等。
+_LYRIC_PUNCT = "，。、；：？！,.;:?!…~～·—－-（）()【】[]《》〈〉「」『』“”‘’\"'、／/"
 # 「底部粘着减时线」的补救：16 分音符密集行里，减时线常与数字底部连成一个连通块，
 # 块被撑高 → 归一化后形状里多一条厚底边 → 跟任何参照字形都对不上（判成 `?`）。
 # 实测 14.jpg 行2 那个 `2̇`：块高 51（同图正常数字 43）、与参照 2 的相关仅 0.48；
@@ -3094,43 +3098,61 @@ def ocr_to_stream(image_path, debug_dir=None, measure_mode="vline", header_ocr=T
             if VERBOSE_DEBUG:
                 print(f"  [lyr] 行{row_index + 1} 候选文本块 {len(cand)} → 分成 {len(verses)} 段"
                       f"（各段块数 {[len(b) for b in verses[:MAX_LYRIC_VERSES]]}）")
-            for vi, band in enumerate(verses[:MAX_LYRIC_VERSES]):
-                field = "lyric" if vi == 0 else "lyric%d" % (vi + 1)
-                # 摊成「逐字 + 估计 x」（同一块内按字均匀估 x —— 汉字近似等宽）
-                chars = []
+            # 切成**音节槽**：汉字/字母/数字各自起一槽，**标点并入相邻槽**（用户 2026-09-30 指出）。
+            # 标点不该独占一个音的时值；更关键的是 —— **槽数相等才是三段词能互相对齐的前提**，
+            # 而"字数"会因标点多少而不同（《上海滩》三段实测 13/12/14 字）。
+            verse_slots = []
+            for band in verses[:MAX_LYRIC_VERSES]:
+                slots = []          # [(槽文本, 槽的估计 x)]
+                pending = ""        # 块首的标点：攒着，并入下一个汉字槽
                 for tk in band:
                     text = tk["text"]
                     if not text:
                         continue
                     span = tk["x1"] - tk["x0"]
-                    for ci, ch in enumerate(text):
-                        if ch.strip():
-                            chars.append((tk["x0"] + span * (ci + 0.5) / max(len(text), 1), ch))
-                if not chars:
+                    nl = max(len(text), 1)
+                    for pos, ch in enumerate(text):
+                        if not ch.strip():
+                            continue
+                        x = tk["x0"] + span * (pos + 0.5) / nl
+                        if ch in _LYRIC_PUNCT:
+                            if slots:
+                                slots[-1][0] += ch
+                            else:
+                                pending += ch
+                        else:
+                            slots.append([pending + ch, x])
+                            pending = ""
+                if pending:
+                    slots.append([pending, 0.0])        # 整块没有汉字（少见）
+                verse_slots.append(slots)
+            # 槽按 x 排序（块在行内不一定左到右排列，不排会串序）
+            for slots in verse_slots:
+                slots.sort(key=lambda s: s[1])
+            # 分配：**按槽的 x 就近** —— 这才是原谱的规则：**同一个音节在同一个 x**，
+            # 所以三段**天然对齐**（哪怕各段槽数不同：《上海滩》实测 12/12/14 槽，
+            # 因为 `(是)` 与 `(又有)` 长度本就不同，任何"按序号铺开"的办法都会把三段错开）。
+            # 标点已并入槽，所以"一个字独占一个音"造成的假洞也没有了。
+            # 丢弃门槛：**挂在"本行的音距"上**，不用固定的 1.3 字高。
+            # 旧门槛是绝对量，实测《上海滩》因此丢了 5 个字（`失/心/你，/转/滩，`，距离 1.37~1.72H，
+            # **刚过线**）—— 而"字在块内按均匀分布估 x"本身就有误差，1.3H 这种量级顶不住。
+            # 改成"只丢落在【本行音符 x 范围 ± 一个中位音距】之外的槽"：密行自动收紧、疏行自动放松，
+            # 换谱不用调数。（当日第 N 次踩同一个坑：**绝对阈值换谱就碎**。）
+            _gaps = [b["cx"] - a["cx"] for a, b in zip(row_notes, row_notes[1:])]
+            _gap = sorted(_gaps)[len(_gaps) // 2] if _gaps else H
+            _lo, _hi = row_notes[0]["cx"] - _gap, row_notes[-1]["cx"] + _gap
+            for vi, slots in enumerate(verse_slots):
+                if not slots:
                     continue
-                chars.sort(key=lambda t: t[0])
-                # **首尾锚点 + 中间保序**（用户 2026-09-29 选定；全库 A/B 数据见下）。
-                #
-                # 旧做法是"逐字取 x 最近的音"，两个假设都不牢：
-                #   · 谱面的**音距不等于字距** —— 长音占的 x 宽，字却在整行里均匀排；
-                #   · 于是"长音"会一次抢走两个字，紧跟它后面的那个音就**空着**，错位再连锁传下去
-                #     （25.jpg 行2 实测：`在学爱爱情情里` 里 `学爱` 挤在一音、后面空一格 ✗）。
-                # 改成：两端各用 x 找一个**锚点音**（兜"前后有休止、没词"的情况），中间按序号
-                # **单调**铺开 —— 误差被摊到句末，不再连锁。实测（全库 51 张、614 个"行×段"）：
-                #   洞      2041 → 1430
-                #   多字音   657 → 262
-                #   丢字     251 → 0     ← 旧做法会把离任何音 >1.3 字高的字丢掉，连 `(国:)` 这种都丢
-                #   其中"字==音"的 29 段（本来就该一字一音）：洞 **45 → 0**
-                # ⚠ 保序的前提是"字序与音序一致"；真的错位（音字本就不对应）会被它摊平而看不出——
-                #   数据里没有这种证据（洞是减少不是转移），且两端锚点能防整体漂移。
-                i0 = min(range(len(row_notes)), key=lambda j: abs(row_notes[j]["cx"] - chars[0][0]))
-                i1 = min(range(len(row_notes)), key=lambda j: abs(row_notes[j]["cx"] - chars[-1][0]))
-                if i1 < i0:
-                    i0, i1 = i1, i0
-                n = len(chars)
-                for k, (_xc, ch) in enumerate(chars):
-                    nt = row_notes[i0 if n == 1 else i0 + int(round(k * (i1 - i0) / (n - 1)))]
-                    nt[field] = (nt.get(field) or "") + ch
+                field = "lyric" if vi == 0 else "lyric%d" % (vi + 1)
+                for txt, x in slots:
+                    if not (_lo <= x <= _hi):
+                        if VERBOSE_DEBUG:
+                            print(f"  [lyr] 行{row_index + 1} 段{vi + 1} 槽'{txt}' x={x:.0f} "
+                                  f"落在本行音符范围[{_lo:.0f},{_hi:.0f}]之外 → 丢弃")
+                        continue
+                    j = min(range(len(row_notes)), key=lambda j: abs(row_notes[j]["cx"] - x))
+                    row_notes[j][field] = (row_notes[j].get(field) or "") + txt
 
         labeled = sum(n["n"] is not None for n in notes)
         ratio = labeled / max(len(notes), 1)
