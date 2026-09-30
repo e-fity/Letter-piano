@@ -1034,5 +1034,265 @@
       "7": 19
     },
     "rows": 6
+  },
+  "42.jpg": {
+    "lines": [
+      "H G — | F — S_ D_ F_ H_ | J_ J J_ J_ H J_ | H__ ⌒ D__ F · 0 0",
+      "F — D — | S — N_ B_ S_ D_ | G_ Gt G_ G_ D G_ | D S · 0 0",
+      "F_ F F_ F__ ⌒ D__ D F_ | D_ · ⌒ S__ S 0 0 | 0_ S_ D_ S_ M B_ ⌒ H_ | H — S_ D_ F_ H_",
+      "G · G_ G_ D G_ | H_ H_ G_ F_ ⌒ F — | F_ D_ D_ S_ D — | 0 0 0 0_ F_",
+      "S D_ D_ M D_ | S_ S_ M_ N_ ⌒ N — | 0 0>t 0t 0 | F_ D_ D_ S_ D · S_",
+      "J J J J H J | H_ F_ D_ S_ ⌒ E — | 0 0 0 0 | J_ H_ H_>t F_ H · F_",
+      "D — B_ N_ S_ D_ | F_ F F_ F__ ⌒ R__ D F_ | D__ ⌒ S__ S · 0 0 | G_ G · ⌒ G D_ ⌒ F_",
+      "D — B_ N_ S_ D_ | S S S_ S__ ⌒ M__ M S_ | N__ ⌒ B__ B · 0 0 | S_ S · ⌒ S D_ ⌒ S_",
+      "D — B_ N_ S_ D_ | H_ H · ⌒ H H | G_ ⌒ F · S_ D_ F_ H_ | J_ J J_ J_ H J_",
+      "D__ ⌒ S__ ⌒ S · S_ D_ F_ H_ | J_ J J J_ H J_ | H_ H_ G_ F_ ⌒ F — | F_ D_ D_ S_ D —",
+      "D__ ⌒ S__ ⌒ S · B_ N_ S_ D_ S_ G G_ G_ D G_ | F_ F_ D_ S_ ⌒ S — | 0 0 0 0",
+      "H__ ⌒ D__ F · 0 0 | S_ S S_ M_ M M | M_ M_ M_ N_ ⌒ N — | 0 0 0 0"
+    ],
+    "dist": {
+      "0": 33,
+      "1": 45,
+      "2": 44,
+      "3": 33,
+      "4": 20,
+      "5": 33,
+      "6": 31,
+      "7": 11
+    },
+    "rows": 12
+  },
+  "43.jpg": {
+    "lines": [
+      "0 0 0 0_ S_ | H — — | ( J_ J J_ H_ H J_ | F_ J_ K_ E_ ⌒ E —",
+      "F_ D_ D_ S__ D__ ⌒ D · S_ | D — — — | 0 0 0 0 | 0 0 0 0",
+      "0 0>t 0 0_ Z_ | Mt — — — | 0 0 0 0 | 0 0 0 0",
+      "T_ R_ R_ E_ R · J | T_ R_ R_ E__ R__ R J | E — — — ) | B B N_ F F",
+      "0 0 0 0 | 0 0 0 0 | 0 0 · 0 0 | B_ B N_ S S",
+      "0 0 0 0 | 0 0 0 0 | 0 0 0 0 | B_ B N_ H H",
+      "G_ G F__ ⌒ D__ M — | B_ B N_ F F | D_ S D_ F — | 0 0 0 0",
+      "D_ S N__>t ⌒ B__ B — | B_ B N_ S S | D_ S D_ S, — | 0 0 0 0",
+      "G_ G F__ ⌒ D__ D | B B N H H | G G G H — | J_ H F H H",
+      "0_ 0 0_ 0_ J ⌒ H__ ⌒ G__ | G_ G H_ G 0_ D_ | F — — | F 0 0 0",
+      "F D S D — | D D F D 0_ N_ | E — — — | S 0 0 0",
+      "0 · H_ ⌒ G — | D D F D 0_ N_ | S — — — | S 0 B_ N_ S_ D_"
+    ],
+    "dist": {
+      "0": 71,
+      "1": 23,
+      "2": 30,
+      "3": 17,
+      "4": 12,
+      "5": 29,
+      "6": 19,
+      "7": 3
+    },
+    "rows": 12
+  },
+  "44.jpg": {
+    "lines": [
+      "( B_ N_ S_ D_ | F · H_ D · H_ | D_ S · S_ D_ F_ H_ | J — H · J_ | H_ F · S_ D_ F_ H_ | J · J_ H H_ J_",
+      "F_ J_ K_ E_ ⌒ E — | T_ R_ R_ E_ R · J_ | T_ R_ R_ E_ R J | E — — 0_ F_ | H — — )",
+      "B_ B N_ S S | D_ S N__ ⌒ B__ B — | 0 0 0 0 | 0 0 0 0",
+      "0 0 0 0 | 0 0 0 0 | 0 0 0 0 | 0 0 0 0",
+      "0 0 0 0 | 0 0 0 0 | B_ B N_ S S | D_ S D_ F —",
+      "J_ H F_ H H | F_ D S_ D — | G_ S H_ G 0_ D_ | F —",
+      "G_ F S_ F F | S_ M N_ N — | D_ D F_ D 0_ N_ | S — — —",
+      "0 0 0 0 | 0 0 0 0 | D_ D F_ D 0_ N_ | S — — —",
+      "F 0 B_ N_ S_ D_ | F_ F F_ F__ ⌒ D__ D F_ | D_ ⌒ S_ S 0 0 | 0_ 0 0_ 0_ 0 0_",
+      "S 0 B_ N_ S_ D_t | S_ S S_>t M_ M S_ | M_ ⌒ N_ N 0 0 | 0_ 0 0_ 0_ 0 0_",
+      "S 0 0 0 | 0_ 0 0_ 0_ 0 0_ | 0 0 S_ D_ F_ H_ | J_ J J_ H__ ⌒ J__ H H__ ⌒ J__",
+      "0 0 S_ D_ F_ H_ | J_ J J_ J_ H J_ | H_ H_ G_ F_ ⌒ F — | 0 0 0 0",
+      "0 0 B_ N_ S_ D_ | G_ G G_ G_ D G_ | F_ F_ D_ S_ ⌒ S — | 0 0 0 0",
+      "H__ ⌒ D__ F · 0 0 | 0_ 0 0_ 0_ 0 0_ | 0 0 0 0 | F_ D_ D_ S__ D__ ⌒ D —"
+    ],
+    "dist": {
+      "0": 97,
+      "1": 37,
+      "2": 38,
+      "3": 31,
+      "4": 9,
+      "5": 32,
+      "6": 32,
+      "7": 5
+    },
+    "rows": 14
+  },
+  "45.jpg": {
+    "lines": [
+      "0 0 0 0 | H_ G_ G_ F_ G · D_ | F — B_ N_ S_ D_ | H_ · H_ ⌒ H — H_ · ⌒ G__",
+      "F_ D_ D_ S_ D — | F_ D_ D_ S_ D · N | S — B_ N_ S_ D_ | F_ · F__ ⌒ F — F_ · ⌒ D__",
+      "J_t H_ H_>t S_ H — | S_ D_ D_ S_ D · N_ | S> — B_ N_ S_ D_ | F_ · F__ ⌒ F_ F_ F__ ⌒ D__ D D__ ⌒ F__",
+      "S_ ⌒ F · S_ D_ F_ H_ | J_ I J_ I_ H J_ | H__ ⌒ D__ F · 0 0 | G · G_ G_ D G_",
+      "D_ ⌒ S · B_ N_ S_ D_ | G_ G G G D G | D S · 0 0 | D · D_ D M D",
+      "D__ ⌒ S__ S · 0 0 | 0_ S_ D_ S_ M B_ ⌒ H_ | H — S_ D_ F_ H_ | J J I_ J_ H J_",
+      "H_ H_ G_ S_ ⌒ S — | S_ D_ D_ S_ D — | 0 0 0 0 | H_ G_ G_ F_ G · D_",
+      "S_ S_ M_ N_ ⌒ N — | 0 0>t 0 0 | S_ D_ D_ S_ D — | F_ D_ D_ S_ D · N_",
+      "H_ F_ D_ S_ ⌒ S — | 0 0 0 0 | J_ H_ H_ F_ H — | F_ D_ D_ S_ D · N_",
+      "F — — — | F_ D_ D_ S_ D — | 0 0 0 0 | H_ G_ G_ F_ G —",
+      "S — — | 0 0 0 0 | J_ H_ H_ F_ H — | F_ D_ D_ S_ D —",
+      "G D F — | F — G — | F — — — | F — — | S 0 0 0 ||",
+      "D N S — | S — D — | S[1] — — — | S[3] — — — | S 0 0 0 ||",
+      "D N S — | S — J — | H — — — | H[3] — — — | H 0 0 0 ||"
+    ],
+    "dist": {
+      "0": 40,
+      "1": 43,
+      "2": 55,
+      "3": 32,
+      "4": 22,
+      "5": 34,
+      "6": 26,
+      "7": 3
+    },
+    "rows": 14
+  },
+  "46.jpg": {
+    "lines": [
+      "? X | 0 | D 0 | 0",
+      "( T — — U | I — — T_ U_ | E — J_ E_ R_ T_ | U — — E_ T_",
+      "( Z↓_, B↓_ Z_ C_ B — | N↓_t C_ N_ S_ F — | V↓_t Z_ V_ N_ S — | C↓_t M↓_ C_ B_ M —",
+      "R J — U_ T_ | U — T · R_ | ( E — — — | E — 0 0 )",
+      "X_t N_ X_ V_ N — | B_t X_ B_ M_ D — | Z↓_, B_ Z_ C_ B — | Z_ B_ Z_ C_ B — )",
+      "||: T_ U U__ ⌒ I__ T · R_ E_ R_ T_ ⌒ J_ H — | J_ J E_ R_ E_ U_ ?_t I_ | I_ T_ ⌒ T — —",
+      "||: Z↓_ B↓_ Z_ C_ B — | N↓_t C_ N_ S_ C↓_t M↓_ C_ B_ | V↓_t Z_ V_ N_ B↓_t X_ B_ M_ | Z↓_ B↓_ Z_ C_ B —",
+      "U_ I E↑_ I · T_ | U_ T_ U_ ⌒ I_ E — | J_ E_ R_ T__ ⌒ U__ T R__ ⌒ T__ ⌒ R_ | E_ E ⌒ E —",
+      "V↓_t Z_ V_ N_ S — | C↓_t M↓_ C_ B_ N↓_t C_ N_ S_ | V↓_t Z_ V_ N_ B↓_t X_ B_ M_ | Z↓_, B↓_ Z_ C_ B —",
+      "U U_ T_ U_ I_ E↑_ ⌒ O_ | I — — U_ U__ ⌒ I__ | T · U_ E_ J_ E_ U__ T__ | R__ ⌒ T__ ⌒ R · ⌒ R 0",
+      "Z↓_t B_ Z_ C_ B — | N_t C_ N_ S_ F — | C_t M↓_ C_ B_ V↓_t Z_ V_ N_ | B_t X_ B_ M_ D —"
+    ],
+    "dist": {
+      "0": 6,
+      "1": 42,
+      "2": 22,
+      "3": 41,
+      "4": 11,
+      "5": 46,
+      "6": 32,
+      "7": 10
+    },
+    "rows": 11
+  },
+  "47.jpg": {
+    "lines": [
+      "S ⌒ S__ — H__ — S__ — F__ G_ — F_ S_ — D_ | F · S_ — D — | S ⌒ S__ — H__ — S__ — F__ G_ — F_ D_ — S_",
+      "F · S_ D — | S — — — | S — — B_ — N_ | ||: S_ — S_ S_ — S N_ — B_",
+      "S_ S D_ S N_ — S_ | D_ D D_ D S_ — N_ | D_ D F_ D F_ — H_ | J_ H H_ J H_ — F_",
+      "D_ — F_ D_ — S_ N B_ — N_ | S_ S S_ S N | S — — B_ — N_ :|| S_ S S_ S D_ — ⌒ S_",
+      "S — — F_ — H_ | J_ J J_ J E_ — J_ | H_ H J_ H F_ — D_ | S_ S S_ S D",
+      "F — — F_ — D_ | S_ S S_ S E_ — J_ | H_ H J_ H F_ — H_ | J · E_ E J_ — ⌒ H_",
+      "H_ — — F_ — H_ | J_ J J_ J S_ — J_ | H_ H J_ H F_ — D_ | S_ S S_ S H",
+      "F — — F_ — D_ | S_ S S_ S D_ — F_ | H_ H F_ H F_ — H_ | J — — —",
+      "0 0_ — N_ F_ D S_ | S — — — | ( F — ) | 0 0 0 B_ — N_ :||",
+      "S — — F_ — H_ || 0 0_ — N_ F_ — D_ F_ — ⌒ D__ — ⌒ S__ | S — — — ||"
+    ],
+    "dist": {
+      "0": 7,
+      "1": 59,
+      "2": 24,
+      "3": 27,
+      "4": 2,
+      "5": 31,
+      "6": 30
+    },
+    "rows": 10
+  },
+  "48.jpg": {
+    "lines": [
+      "T — H | S_ ⌒ K_ ⌒ E_ ⌒ K_ ⌒ E_ ⌒ K_ | J — — | 0 0 F_ · F_ | J — J | I↑ T F | T — 0",
+      "0 0 · 0 | F — N | J — ⌒ F_ ⌒ D_ | D — — | 0 0 C_ F_ | E — F | F F —",
+      "0 0 · 0 | 0 0 0 | M H F | K H — ?_ · F__ | K H · F_ | J — ⌒ F_ ⌒ D_ | D ⌒ S —",
+      "0 0 0 | F · T↑ D | F F_ · R_ F | H G · 0 | G_ ⌒ F_ · D 0 | D_ · S__ D D_ · S__ | D_ ⌒ G_ F —",
+      "F_ F_ I S_ · E__ | D_ ⌒ G_ F F_ · H__ | G 0 Y_ · T__ | D_ S__ D_ · E__ D",
+      "D_ · S__ · D_ · ⌒ G_ F | 0 K K | K — — | K — — | T · — D | T R | T T R | T — 0",
+      "D_ · S__ D_ ⌒ G_ F | 0 · K K | K — — | K — — | E E 0 | J J 0 | F F D | F — 0"
+    ],
+    "dist": {
+      "0": 26,
+      "1": 15,
+      "2": 23,
+      "3": 39,
+      "4": 8,
+      "5": 6,
+      "6": 10,
+      "7": 14
+    },
+    "rows": 7
+  },
+  "49.jpg": {
+    "lines": [
+      "( 0 N_ S__ S__ | D_ F_ H_ F_ | N_ S__ S__ D_ F_ ) | ||: K_ F_ J | J — | J_ F_ H | H — | K_ F_ J",
+      "J, — | J_ F_ H | H — | K_ F_ J_ J_ | J — | J__ F_ H_ H_ | H — | K_ F_ J_ J_",
+      "J, — | J_ F_ H_ H_ | H — | B_ N_ S_ D_ | F_ D_ F | F — | H_ F_ D_ S_",
+      "F_ D_ F | F — | S_ S_ S_ D_ | F_ D_ F | F · H__ J__ | J_ H_ F_ D_ | D_ F__ ⌒ D__",
+      "F, — | F_ D_ F_ F_ | F_ F_ D_ ⌒ F_ D_ D_ N | J_ ⌒ H_ J | J_ H_ G_ F_ | D —",
+      "N_ N_ F_ F_ | D_ F_ S_ ⌒ M_ | S N | H_ H_ D | S_ ⌒ N_ S_ N_ | N — | F_ D_ F_ F_",
+      "F D_ D__ ⌒ F__ D_ D_ N | J_ H_ J | J_ H_ G_ F_ | D — | N_ N_ F_ F_",
+      "D_ F_ S_ M_ | S N | H_ H_ D S_ N_ S_ N_ | N — | ( 0 N_ S__ S__ | D_ F_ H_ F_",
+      "N_ S__ S__ D_ F_ | K_ F_ J | J J_ F_ | H — | K_ F_ J | J J_ F_ | H — | K_ F_ J | J J_ F_ | H — ) :||"
+    ],
+    "dist": {
+      "0": 2,
+      "1": 21,
+      "2": 28,
+      "3": 52,
+      "4": 2,
+      "5": 27,
+      "6": 50,
+      "7": 9
+    },
+    "rows": 9
+  },
+  "50.jpg": {
+    "lines": [
+      "? 0_ H_ E_ R_ | T T__ · R__ E__ R__ R · R__ T__ | R_ E_ K__ · E__ K_ J · E__ R__",
+      "T T__ R__ E__ R__ R · R__ E__ K__ · E↑↑__ | E_ · H__ E__ U__ K__ E__ U_ E_ E_ · R_ | T__t R__ E__ R__ R — R__ T__",
+      "R_ E_ K__ E__ K_ J · E__ R__ | T T__ · R__ E__ R__ R R__ · E__ K__ E__ | E H_ G_ F — ? | 0_ B_ S_ · D_",
+      "F_ F__ F__ F__ · ⌒ D__ E__ ⌒ D__ D 0_ D__ F__ | D__ S__ S__ S__ M_ S__ ⌒ M__ N 0_ S__ D__",
+      "F__ F__ F__ F__ D_ S_ D__ D__ D__ D__ S_ M_ | S — 0_ B_[2] S_ D_ —",
+      "F_ D_ S__ S__ S__ S__ S_ D_ D F_ D_ | S__ S__ S__ S__ F_ G_ · D — ||",
+      "X↓_ D F__ J_ · | H__ H__ U__ H__ H__ G__ · F__ ⌒ G__ U · H__ H__",
+      "J_ F_ F__ D__ S__ ⌒ D__ F 0_ F__ D__ | S · S_ · D F__ D__ S__ ⌒ M__"
+    ],
+    "dist": {
+      "0": 6,
+      "1": 45,
+      "2": 47,
+      "3": 29,
+      "4": 4,
+      "5": 15,
+      "6": 5,
+      "7": 11
+    },
+    "rows": 8
+  },
+  "51.png": {
+    "lines": [
+      "( C — ⌒ C — | J_ · F__ H_ S_ G_ · J__ S_ H_ J ) N_ · M__ | S D | F — | F —",
+      "0 S_ D_ | F J | K — | 0 0 | F — | ( 0_ F__ F__ F__ F__ F__ F__ ) | E — F H",
+      "D — — — | H · D_ F H | J — — — | R — T R | E — — R_ E_ | K — J H",
+      "J — — — | E · J_ H F | E · N H F E_ E J_ H E | J_>t J_>t 0 0 0",
+      "F · S_ D F | H J_ · ⌒ H__ F 0 | D · H_ F S N_[1] N_ 0 0 0 || N 0 0 0",
+      "N_ S_ B_ B_ D H — — — ? — — — | J_ H_ F_ H_ E K_ ⌒ J_ | J — — — | E · J_ H F",
+      "D H F S | N_ S_ D_ F_ H_ F_ E_ ⌒ K_ | J — — — | E · J_ H F | E · J ? F",
+      "E_ E J_ · H E | J_>t J_> 0 0 · 0 | F · S_ D F H J_ H_ F — | E_ E J_ R E_ ⌒ K_",
+      "J — — — | ( J_ F E_ J — ) | J_ ⌒ T ⌒ E_ ⌒ J | ( R_ J Y_ R — )",
+      "D_ ⌒ J ⌒ Y_ ⌒ R — | ( M ⌒ D_ ⌒ F_ ⌒ G | M ⌒ D_ ⌒ F_ ⌒ G — | F__ F__ F__ F__ F__ F__ F__ F__ C_ F_ 0_ F__ H__",
+      "J · H_ F_ D_ S_ B_ ) | N_ S_ B_ B_ D H | F — — — | J_ H_ F_ H_ E K_ ⌒ J_",
+      "J — — — | E J_ H F | D H F S | N_ S_ D_ F_ H_ F_ E_ ⌒ K_ | J — — —",
+      "E · J_ H F | E · J_ H F | E_ E J_ H E | J_>t J_ 0 0 0 F · S_ D F",
+      "H J_ H_ F — E J_ R ⌒ E | F — H — | J — — — | J — — — J 0 0 0"
+    ],
+    "dist": {
+      "0": 24,
+      "1": 46,
+      "2": 26,
+      "3": 60,
+      "4": 5,
+      "5": 41,
+      "6": 56,
+      "7": 10
+    },
+    "rows": 14
   }
 }
